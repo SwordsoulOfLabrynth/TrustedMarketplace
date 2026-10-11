@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TrustedMarketplace.Api/TrustedMarketplace.Api.csproj" />
+    <Project Path="src/TrustedMarketplace.Application/TrustedMarketplace.Application.csproj" />
+    <Project Path="src/TrustedMarketplace.Domain/TrustedMarketplace.Domain.csproj" />
+    <Project Path="src/TrustedMarketplace.Infrastructure/TrustedMarketplace.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TrustedMarketplace.IntegrationTests/TrustedMarketplace.IntegrationTests.csproj" />
+    <Project Path="tests/TrustedMarketplace.UnitTests/TrustedMarketplace.UnitTests.csproj" />
+  </Folder>
+</Solution>
