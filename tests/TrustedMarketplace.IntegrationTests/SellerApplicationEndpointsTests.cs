@@ -190,7 +190,8 @@ public class SellerApplicationEndpointsTests : IClassFixture<WebApplicationFacto
         // 1. Buyer creates application
         using var appReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/seller-applications");
         appReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", buyerToken);
-        appReq.Content = JsonContent.Create(new CreateSellerApplicationRequest("Admin Workflow Store", "Crafter", "0999887766"));
+        var uniqueStore = $"Admin Store {Guid.NewGuid():N}"[..25];
+        appReq.Content = JsonContent.Create(new CreateSellerApplicationRequest(uniqueStore, "Crafter", "0999887766"));
         var appResp = await _client.SendAsync(appReq);
         var createdApp = await appResp.Content.ReadFromJsonAsync<SellerApplicationDto>();
         Assert.NotNull(createdApp);

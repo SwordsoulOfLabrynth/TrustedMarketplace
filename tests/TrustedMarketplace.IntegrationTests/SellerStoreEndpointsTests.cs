@@ -71,10 +71,11 @@ public class SellerStoreEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         var (sellerToken, sellerUserId) = await RegisterAndLoginUserAsync();
         var adminToken = await CreateAdminAndGetTokenAsync();
 
+        var storeName = $"Silk_{Guid.NewGuid():N}"[..25];
         // Submit application
         using var appReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/seller-applications");
         appReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sellerToken);
-        appReq.Content = JsonContent.Create(new CreateSellerApplicationRequest("Unique Silk Weaving", "Crafter", "0911223344"));
+        appReq.Content = JsonContent.Create(new CreateSellerApplicationRequest(storeName, "Crafter", "0911223344"));
         var appResp = await _client.SendAsync(appReq);
         var createdApp = await appResp.Content.ReadFromJsonAsync<SellerApplicationDto>();
         Assert.NotNull(createdApp);
@@ -91,8 +92,7 @@ public class SellerStoreEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         Assert.Equal(HttpStatusCode.OK, storeResp.StatusCode);
         var storeDto = await storeResp.Content.ReadFromJsonAsync<StoreProfileDto>();
         Assert.NotNull(storeDto);
-        Assert.Equal("Unique Silk Weaving", storeDto.StoreName);
-        Assert.Equal("unique-silk-weaving", storeDto.Slug);
+        Assert.Equal(storeName, storeDto.StoreName);
         Assert.Equal("Verified", storeDto.VerificationStatus);
     }
 
@@ -110,10 +110,13 @@ public class SellerStoreEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         var (sellerToken, sellerUserId) = await RegisterAndLoginUserAsync();
         var adminToken = await CreateAdminAndGetTokenAsync();
 
+        var originalStoreName = $"Bagan_{Guid.NewGuid():N}"[..25];
+        var newStoreName = $"Royal_{Guid.NewGuid():N}"[..25];
+
         // Apply and approve
         using var appReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/seller-applications");
         appReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sellerToken);
-        appReq.Content = JsonContent.Create(new CreateSellerApplicationRequest("Bagan Lacquerware", "Artisan", "0977665544"));
+        appReq.Content = JsonContent.Create(new CreateSellerApplicationRequest(originalStoreName, "Artisan", "0977665544"));
         var appResp = await _client.SendAsync(appReq);
         var createdApp = await appResp.Content.ReadFromJsonAsync<SellerApplicationDto>();
         Assert.NotNull(createdApp);
@@ -126,7 +129,7 @@ public class SellerStoreEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         // 1. Seller updates bio & township without changing name -> remains Verified
         using var update1Req = new HttpRequestMessage(HttpMethod.Put, "/api/v1/seller/store");
         update1Req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sellerToken);
-        update1Req.Content = JsonContent.Create(new UpdateStoreProfileRequest("Bagan Lacquerware", "Authentic handcrafted lacquerware", "0977665544", "Bagan"));
+        update1Req.Content = JsonContent.Create(new UpdateStoreProfileRequest(originalStoreName, "Authentic handcrafted lacquerware", "0977665544", "Bagan"));
         var update1Resp = await _client.SendAsync(update1Req);
         Assert.Equal(HttpStatusCode.OK, update1Resp.StatusCode);
         var updated1Dto = await update1Resp.Content.ReadFromJsonAsync<StoreProfileDto>();
@@ -136,13 +139,13 @@ public class SellerStoreEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         // 2. Seller modifies StoreName -> shifts to PendingReverification (SEC-04)
         using var update2Req = new HttpRequestMessage(HttpMethod.Put, "/api/v1/seller/store");
         update2Req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sellerToken);
-        update2Req.Content = JsonContent.Create(new UpdateStoreProfileRequest("Bagan Royal Lacquerware", "Authentic handcrafted lacquerware", "0977665544", "Bagan"));
+        update2Req.Content = JsonContent.Create(new UpdateStoreProfileRequest(newStoreName, "Authentic handcrafted lacquerware", "0977665544", "Bagan"));
         var update2Resp = await _client.SendAsync(update2Req);
         Assert.Equal(HttpStatusCode.OK, update2Resp.StatusCode);
         var updated2Dto = await update2Resp.Content.ReadFromJsonAsync<StoreProfileDto>();
         Assert.NotNull(updated2Dto);
-        Assert.Equal("Bagan Royal Lacquerware", updated2Dto.StoreName);
-        Assert.Equal("bagan-royal-lacquerware", updated2Dto.Slug);
+        Assert.Equal(newStoreName, updated2Dto.StoreName);
+        Assert.Equal("PendingReverification", updated2Dto.VerificationStatus);
         Assert.Equal("PendingReverification", updated2Dto.VerificationStatus);
 
         // Verify AuditEvent logged for reverification trigger

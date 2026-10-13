@@ -17,6 +17,11 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<TrustedMarketplace.Domain.Verification.VerificationEvidence> VerificationEvidences => Set<TrustedMarketplace.Domain.Verification.VerificationEvidence>();
     public DbSet<TrustedMarketplace.Domain.Verification.VerificationDecisionHistory> VerificationDecisionHistories => Set<TrustedMarketplace.Domain.Verification.VerificationDecisionHistory>();
     public DbSet<TrustedMarketplace.Domain.Stores.SellerProfile> SellerProfiles => Set<TrustedMarketplace.Domain.Stores.SellerProfile>();
+    public DbSet<TrustedMarketplace.Domain.Subscriptions.SubscriptionPlan> SubscriptionPlans => Set<TrustedMarketplace.Domain.Subscriptions.SubscriptionPlan>();
+    public DbSet<TrustedMarketplace.Domain.Subscriptions.SellerSubscription> SellerSubscriptions => Set<TrustedMarketplace.Domain.Subscriptions.SellerSubscription>();
+    public DbSet<TrustedMarketplace.Domain.Catalog.Category> Categories => Set<TrustedMarketplace.Domain.Catalog.Category>();
+    public DbSet<TrustedMarketplace.Domain.Catalog.Product> Products => Set<TrustedMarketplace.Domain.Catalog.Product>();
+    public DbSet<TrustedMarketplace.Domain.Catalog.ProductImage> ProductImages => Set<TrustedMarketplace.Domain.Catalog.ProductImage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
