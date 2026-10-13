@@ -5,10 +5,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using TrustedMarketplace.Application.Common.Interfaces;
 using TrustedMarketplace.Application.Identity;
+using TrustedMarketplace.Application.Verification;
 using TrustedMarketplace.Infrastructure.Identity;
 using TrustedMarketplace.Infrastructure.Persistence;
 using TrustedMarketplace.Infrastructure.Persistence.Interceptors;
+using TrustedMarketplace.Infrastructure.Storage;
+using TrustedMarketplace.Infrastructure.Verification;
 
 namespace TrustedMarketplace.Infrastructure;
 
@@ -134,6 +138,15 @@ public static class DependencyInjection
             };
         });
 
+        return services;
+    }
+
+    public static IServiceCollection AddInfrastructureVerification(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddSingleton<IFileStorageService, LocalFileStorageService>();
+        services.AddScoped<IVerificationService, VerificationService>();
         return services;
     }
 }

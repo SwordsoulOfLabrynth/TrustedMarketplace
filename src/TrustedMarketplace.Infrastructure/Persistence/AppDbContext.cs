@@ -13,6 +13,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
 
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<TrustedMarketplace.Domain.Verification.SellerApplication> SellerApplications => Set<TrustedMarketplace.Domain.Verification.SellerApplication>();
+    public DbSet<TrustedMarketplace.Domain.Verification.VerificationEvidence> VerificationEvidences => Set<TrustedMarketplace.Domain.Verification.VerificationEvidence>();
+    public DbSet<TrustedMarketplace.Domain.Verification.VerificationDecisionHistory> VerificationDecisionHistories => Set<TrustedMarketplace.Domain.Verification.VerificationDecisionHistory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

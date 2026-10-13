@@ -38,6 +38,9 @@ builder.Services.AddCors(options =>
 // Register Infrastructure persistence (EF Core PostgreSQL DbContext & Interceptors)
 builder.Services.AddInfrastructurePersistence(builder.Configuration);
 
+// Register Evidence Storage & Verification services
+builder.Services.AddInfrastructureVerification(builder.Configuration);
+
 // Register ASP.NET Core Identity core services & EF Core stores
 builder.Services.AddInfrastructureIdentity(builder.Configuration);
 
