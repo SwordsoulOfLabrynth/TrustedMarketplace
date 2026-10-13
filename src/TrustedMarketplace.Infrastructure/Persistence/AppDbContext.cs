@@ -22,6 +22,11 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<TrustedMarketplace.Domain.Catalog.Category> Categories => Set<TrustedMarketplace.Domain.Catalog.Category>();
     public DbSet<TrustedMarketplace.Domain.Catalog.Product> Products => Set<TrustedMarketplace.Domain.Catalog.Product>();
     public DbSet<TrustedMarketplace.Domain.Catalog.ProductImage> ProductImages => Set<TrustedMarketplace.Domain.Catalog.ProductImage>();
+    public DbSet<TrustedMarketplace.Domain.Orders.Order> Orders => Set<TrustedMarketplace.Domain.Orders.Order>();
+    public DbSet<TrustedMarketplace.Domain.Orders.OrderItem> OrderItems => Set<TrustedMarketplace.Domain.Orders.OrderItem>();
+    public DbSet<TrustedMarketplace.Domain.Orders.OrderStatusHistory> OrderStatusHistories => Set<TrustedMarketplace.Domain.Orders.OrderStatusHistory>();
+    public DbSet<TrustedMarketplace.Domain.Reviews.Review> Reviews => Set<TrustedMarketplace.Domain.Reviews.Review>();
+    public DbSet<TrustedMarketplace.Domain.Complaints.Complaint> Complaints => Set<TrustedMarketplace.Domain.Complaints.Complaint>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
