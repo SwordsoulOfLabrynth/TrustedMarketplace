@@ -7,6 +7,7 @@ using TrustedMarketplace.Application.Common.Security;
 using TrustedMarketplace.Application.Verification;
 using TrustedMarketplace.Application.Verification.Dtos;
 using TrustedMarketplace.Domain.Auditing;
+using TrustedMarketplace.Domain.Stores;
 using TrustedMarketplace.Domain.Verification;
 using TrustedMarketplace.Infrastructure.Persistence;
 
@@ -276,6 +277,22 @@ public class VerificationService : IVerificationService
         {
             case "Approved":
                 application.Approve(adminUserId, request.Reason);
+
+                var existingProfile = await _dbContext.SellerProfiles
+                    .FirstOrDefaultAsync(s => s.SellerUserId == application.UserId, ct);
+
+                if (existingProfile == null)
+                {
+                    var newProfile = new SellerProfile(
+                        application.UserId,
+                        application.ProposedStoreName,
+                        application.ContactPhone);
+                    _dbContext.SellerProfiles.Add(newProfile);
+                }
+                else
+                {
+                    existingProfile.MarkVerified();
+                }
                 break;
             case "Rejected":
                 application.Reject(adminUserId, request.Reason);

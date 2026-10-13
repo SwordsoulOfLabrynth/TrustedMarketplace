@@ -147,6 +147,7 @@ public static class DependencyInjection
     {
         services.AddSingleton<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<IVerificationService, VerificationService>();
+        services.AddScoped<TrustedMarketplace.Application.Stores.ISellerStoreService, TrustedMarketplace.Infrastructure.Stores.SellerStoreService>();
         return services;
     }
 }
