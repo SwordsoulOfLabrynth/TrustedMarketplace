@@ -36,27 +36,24 @@ In Southeast Asian social-commerce and informal e-commerce markets, fraud, non-d
 - **Server-Enforced Order State Machine**: The seller cannot unilaterally mark an order as completed; delivery confirmation requires explicit buyer receipt.
 
 ### What is Currently Implemented vs. Planned
-- **Completed (Phase 1 & Phase 2 — Tasks T-01 through T-07):**
-  - .NET 10 Modular Monolith solution structure and dependency inversion.
-  - PostgreSQL persistence with Entity Framework Core, database configurations, and UTC timestamp interceptors.
-  - RFC 7807 `ProblemDetails` centralized error handling and Serilog structured logging.
-  - Correlation ID tracking via `X-Correlation-ID` header.
-  - ASP.NET Core Identity with PBKDF2 password hashing and account lockout controls.
-  - Public registration (`POST /api/v1/auth/register`) hardcoded to `Buyer` role only.
-  - JWT Bearer authentication (15-min lifetime) + HttpOnly rotating refresh token cookie (7-day lifetime).
-  - Refresh token family rotation with automatic reuse detection and revocation (`TOKEN_REUSE_DETECTED`).
-  - Safe user profile inspection (`GET /api/v1/auth/me`).
-  - Authorization policies (`RequireActiveUser`, `RequireAdmin`) with real-time database account suspension enforcement (`ACCOUNT_SUSPENDED`, `ACCOUNT_CLOSED`).
-  - 73 automated tests (31 Unit Tests, 42 Integration Tests) passing with 0 failures.
-- **Planned (Upcoming Phases — Tasks T-08 through T-17):**
-  - Seller application submission and private NRC image upload with magic-byte validation (T-08).
-  - Admin seller verification workflow and immutable audit log (T-09).
-  - Public store profiles with automatic re-verification triggers on store name edits (T-10).
-  - Product catalog CRUD, publishing rules, and search/filtering (T-11, T-12).
-  - Non-custodial order lifecycle with buyer delivery confirmation (T-13).
-  - Transaction-linked reviews and complaint/dispute resolution (T-14, T-15).
-  - Explainable seller trust profile endpoints (T-16).
-  - Admin-assigned mock subscription tiers (T-17).
+- **Completed (All Backend MVP Phases — Tasks T-01 through T-18):**
+  - **T-01 to T-07 (Auth & Foundation):** .NET 10 Modular Monolith, PostgreSQL EF Core persistence, RFC 7807 ProblemDetails, Serilog structured logging, ASP.NET Core Identity, JWT + rotating refresh token cookies, account suspension enforcement (`RequireActiveUser`, `RequireAdmin`).
+  - **T-08 & T-09 (Seller Verification & Evidence Storage):** Seller application workflow, private evidence storage with magic-byte validation, admin review with immutable audit trails.
+  - **T-10 (Store Profiles & Re-Verification):** Public and seller store endpoints, automatic slug generation, re-verification trigger on store name modifications (`SEC-04`).
+  - **T-11 & T-12 (Product Catalog & Search):** Product CRUD, multi-image support, category hierarchy, draft/published/archived lifecycle, multi-filter keyword catalog search with price bounds.
+  - **T-17 (Subscriptions & Listing Limits):** Admin-managed mock subscriptions (Free, Standard, Premium) and real-time listing quota enforcement on product creation.
+  - **T-13 (Non-Custodial Order State Machine):** Server-enforced order lifecycle (`Placed` &rarr; `Accepted` &rarr; `Shipped` &rarr; `Completed`), IDOR protection (`SEC-06`), and buyer-only delivery confirmation (`SEC-07`, `SEC-08`).
+  - **T-14 (Transaction-Linked Reviews):** Verified reviews linked strictly to completed orders, database unique constraint enforcing 1 review per transaction (`SEC-09`, `SEC-10`, `SEC-11`).
+  - **T-15 (Complaints & Dispute Resolution):** Order participant complaint filing, transition to `Disputed`, admin resolution decisions, and dispute settlement with audit logging.
+  - **T-16 (Explainable Trust Metrics Read Model):** Public explainable trust profiles with verified badge, tenure, completed orders count, review count, average rating, and standard disclaimer.
+  - **T-18 (End-to-End Suite & Security Verification):** 152 automated tests (84 Unit Tests, 68 Integration Tests) passing with 0 failures, zero package vulnerabilities, and full coverage of security rules `SEC-01` through `SEC-13`.
+- **Deferred to Post-MVP (Phase 7):**
+  - D-01: SMS OTP gateway integration.
+  - D-02: Automated mobile wallet payment gateways (KBZPay, WavePay).
+  - D-03: Granular product-level reviews.
+  - D-04: Burmese semantic vector search (`pgvector`).
+  - D-05: Trust-weighted search ranking algorithms.
+  - D-06: Flutter mobile application frontend.
 
 ---
 
@@ -382,14 +379,75 @@ The backend implements exactly **seven (7)** endpoints across Health, Authentica
 
 ---
 
-### 7. Admin Seller Applications (Placeholder Route)
-- **Endpoint:** `GET /api/v1/admin/seller-applications`
-- **Access:** Authenticated Admin (`RequireAdmin` policy)
-- **Description:** Protected route demonstrating administrative authorization boundaries (`SEC-02`).
-- **Response:** `200 OK` `[]`
-- **Error Responses:**
-  - `401 Unauthorized`: Not logged in.
-  - `403 Forbidden` (`INSUFFICIENT_PERMISSIONS`): Logged-in user has `Buyer` role instead of `Admin`.
+### 7. Seller Applications & Verification Workflow (T-08, T-09)
+- `POST /api/v1/seller-applications`: Authenticated active user submits application with proposed store name, business type, and contact phone.
+- `GET /api/v1/seller-applications/my`: Retrieves caller's application status and submitted evidence list.
+- `POST /api/v1/seller-applications/{id}/evidence`: Uploads private NRC/business license evidence (multipart form). Enforces magic-byte file signature validation (`SEC-12`).
+- `GET /api/v1/admin/seller-applications`: Admin reviews paginated queue of pending/processed seller applications.
+- `GET /api/v1/admin/seller-applications/{id}`: Admin inspects application details and evidence records.
+- `POST /api/v1/admin/seller-applications/{id}/decision`: Admin approves or rejects application with mandatory audit reason. Automatically provisions a `Verified` store profile on approval.
+- `GET /api/v1/admin/seller-applications/{id}/evidence/{evidenceId}`: Secure streamed download of private evidence files with strict admin access control (`SEC-12`).
+
+---
+
+### 8. Store Profiles & Reverification (T-10)
+- `GET /api/v1/sellers/{sellerId}/store`: Public endpoint returning store profile, bio, contact phone, city/township, and verification status.
+- `GET /api/v1/seller/store`: Authenticated seller retrieves their own store profile.
+- `PUT /api/v1/seller/store`: Seller updates profile. If `storeName` is modified, status automatically reverts to `PendingReverification` to prevent brand spoofing (`SEC-04`).
+
+---
+
+### 9. Product Catalog & Search (T-11, T-12)
+- `GET /api/v1/categories`: Public listing of available product categories.
+- `GET /api/v1/products`: Public listing search with `keyword`, `categoryId`, `minPrice`, `maxPrice`, `page`, and `pageSize`. Hides draft and archived products.
+- `GET /api/v1/products/{id}`: Public product details. Allows draft/archived views only by the listing owner.
+- `POST /api/v1/seller/products`: Approved seller creates draft listing. Rejects unapproved sellers (`SEC-04`) and enforces subscription listing quotas (`T-17`).
+- `GET /api/v1/seller/products`: Seller retrieves all own listings across Draft, Published, and Archived statuses.
+- `PATCH /api/v1/seller/products/{id}`: Seller updates product title, description, price, condition, or category. Enforces resource ownership (`SEC-05`).
+- `POST /api/v1/seller/products/{id}/publish`: Seller publishes a draft listing.
+- `POST /api/v1/seller/products/{id}/archive`: Seller archives an active listing.
+
+---
+
+### 10. Subscription Plans & Entitlements (T-17)
+- `GET /api/v1/subscription-plans`: Publicly returns available tiers (`Free`, `Standard`, `Premium`) and listing limits (10, 30, 100).
+- `GET /api/v1/seller/subscription`: Authenticated seller inspects current active subscription, tier, expiration, and remaining listing capacity.
+- `POST /api/v1/admin/sellers/{sellerId}/subscription`: Admin assigns subscription tier and validity period.
+
+---
+
+### 11. Non-Custodial Order State Machine (T-13)
+- `POST /api/v1/orders`: Buyer places an order on a published product, capturing address and phone snapshot (`Placed`).
+- `GET /api/v1/orders/{id}`: Retrieves order details and status timeline. IDOR protected: accessible only by buyer, seller, or admin (`SEC-06`).
+- `GET /api/v1/buyer/orders`: Authenticated buyer lists own placed orders.
+- `GET /api/v1/seller/orders`: Authenticated seller lists incoming orders.
+- `POST /api/v1/orders/{id}/accept`: Seller transitions order from `Placed` &rarr; `Accepted`.
+- `POST /api/v1/orders/{id}/ship`: Seller dispatches order with optional courier waybill tracking reference (`Accepted` &rarr; `Shipped`).
+- `POST /api/v1/orders/{id}/confirm-delivery`: **Buyer of the order only.** Transitions `Shipped` &rarr; `Completed`. Enforces `SEC-07` and `SEC-08`.
+- `POST /api/v1/orders/{id}/cancel`: Cancellation with reason (Buyer if `Placed`, Seller before `Shipped`).
+- `POST /api/v1/admin/orders/{id}/resolve-dispute`: Admin resolves disputed order to `Completed` or `Cancelled` with mandatory audit trail.
+
+---
+
+### 12. Reviews & Complaints (T-14, T-15)
+- `POST /api/v1/orders/{orderId}/reviews`: Buyer submits rating (1-5) and comment on a `Completed` order. Enforces `SEC-09` (completed only), `SEC-10` (max 1 review per order), and `SEC-11` (buyer only).
+- `GET /api/v1/sellers/{sellerId}/reviews`: Public paginated reviews for a seller.
+- `POST /api/v1/orders/{orderId}/complaints`: Buyer or seller files complaint, transitioning order status to `Disputed`.
+- `GET /api/v1/complaints/{id}`: Participant or admin retrieves complaint details.
+- `GET /api/v1/admin/complaints`: Admin lists all complaints.
+- `POST /api/v1/admin/complaints/{id}/decision`: Admin records resolution code (`RefundAgreed`, `GoodsDeliveredConfirmed`, `WarningIssued`, `Unfounded`) and summary with audit trail.
+
+---
+
+### 13. Explainable Trust Metrics Read Model (T-16)
+- `GET /api/v1/sellers/{sellerId}/trust-profile`: Public explainable trust profile:
+  - `verificationStatus`: "Verified" or "PendingReverification"
+  - `verifiedSinceUtc`: Verification timestamp
+  - `completedOrdersCount`: Verified database count of completed orders
+  - `reviewCount`: Verified count of published reviews
+  - `averageRating`: Decimal rating average (rounded to 1 decimal place)
+  - `resolvedComplaintsCount`: Count of resolved complaints
+  - `disclaimer`: Mandatory consumer protection disclaimer.
 
 ---
 
@@ -571,7 +629,7 @@ Before implementing any task, teammates must follow this workflow:
 
 ---
 
-## 13. Roadmap Status & Next Tasks
+## 13. Roadmap Status & Verification Summary
 
 | Phase | Task ID | Name | Status |
 | :---: | :---: | :--- | :---: |
@@ -582,15 +640,16 @@ Before implementing any task, teammates must follow this workflow:
 | **2** | **T-05** | Account Model & ASP.NET Core Identity Foundation | **Done** |
 | **2** | **T-06** | Registration & Login API (JWT + Rotating Refresh Tokens) | **Done** |
 | **2** | **T-07** | Authorization Policies & Account Status Handlers | **Done** |
-| **3** | **T-08** | Seller Applications & Secure NRC Evidence Storage | **NEXT** |
-| **3** | **T-09** | Admin Verification Workflow & Audit Trail | Pending |
-| **3** | **T-10** | Store Profiles & Re-Verification Trigger | Pending |
-| **4** | **T-11** | Categories & Product Catalog CRUD | Pending |
-| **4** | **T-12** | Public Catalog Browsing & Search | Pending |
-| **5** | **T-13** | Non-Custodial Order State Machine | Pending |
-| **5** | **T-14** | Transaction-Linked Reviews | Pending |
-| **5** | **T-15** | Complaints & Admin Dispute Resolution | Pending |
-| **5** | **T-16** | Explainable Trust Metrics Read Model | Pending |
-| **6** | **T-17** | Admin-Managed Mock Subscriptions | Pending |
+| **3** | **T-08** | Seller Applications & Secure NRC Evidence Storage | **Done** |
+| **3** | **T-09** | Admin Verification Workflow & Audit Trail | **Done** |
+| **3** | **T-10** | Store Profiles & Re-Verification Trigger | **Done** |
+| **4** | **T-11** | Categories & Product Catalog CRUD | **Done** |
+| **4** | **T-12** | Public Catalog Browsing & Search | **Done** |
+| **5** | **T-13** | Non-Custodial Order State Machine | **Done** |
+| **5** | **T-14** | Transaction-Linked Reviews | **Done** |
+| **5** | **T-15** | Complaints & Admin Dispute Resolution | **Done** |
+| **5** | **T-16** | Explainable Trust Metrics Read Model | **Done** |
+| **6** | **T-17** | Admin-Managed Mock Subscriptions | **Done** |
+| **6** | **T-18** | End-to-End Test Suite & Demo Verification | **Done** |
 
-**Next Task to Begin:** **`T-08: Seller Applications & Secure Evidence Storage`** (Requires team sign-off before coding).
+**Current Backend Status:** **100% Complete (152/152 Tests Passing, 0 Vulnerabilities, Model-Migration Parity Verified)**. Ready for team frontend integration and staging demo.
