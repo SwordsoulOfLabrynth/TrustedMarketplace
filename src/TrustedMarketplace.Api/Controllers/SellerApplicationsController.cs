@@ -42,6 +42,7 @@ public class SellerApplicationsController : ControllerBase
     /// Retrieves the current user's seller verification application status and attached evidence metadata.
     /// </summary>
     [HttpGet("me")]
+    [HttpGet("my")]
     [ProducesResponseType(typeof(SellerApplicationDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMyApplication(CancellationToken ct)
@@ -62,6 +63,7 @@ public class SellerApplicationsController : ControllerBase
     /// Enforces magic byte validation and stores file in private directory outside web root (SEC-12).
     /// </summary>
     [HttpPost("me/evidence")]
+    [HttpPost("{id:guid}/evidence")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(VerificationEvidenceDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]

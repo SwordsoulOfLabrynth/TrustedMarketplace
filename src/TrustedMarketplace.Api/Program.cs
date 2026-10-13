@@ -1,3 +1,4 @@
+using Scalar.AspNetCore;
 using Serilog;
 using TrustedMarketplace.Api.Authorization;
 using TrustedMarketplace.Api.Middleware;
@@ -62,6 +63,19 @@ app.UseExceptionHandler();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "TrustedMarketplace API v1");
+        options.RoutePrefix = "swagger";
+    });
+    app.MapScalarApiReference();
+
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    await TrustedMarketplace.Infrastructure.Persistence.DemoDataSeeder.SeedDemoDataAsync(
+        app.Services,
+        app.Configuration,
+        logger,
+        app.Environment.IsDevelopment());
 }
 
 app.UseHttpsRedirection();
