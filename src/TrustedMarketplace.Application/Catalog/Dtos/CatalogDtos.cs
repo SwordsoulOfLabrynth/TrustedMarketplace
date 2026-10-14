@@ -10,7 +10,16 @@ public record CategoryDto(
 public record ProductImageDto(
     Guid Id,
     string StorageKey,
-    int SortOrder
+    int SortOrder,
+    bool IsPrimary = false,
+    string Url = "",
+    string OriginalFileName = "",
+    string MimeType = "image/jpeg",
+    long FileSizeBytes = 0
+);
+
+public record ReorderProductImagesRequest(
+    List<Guid> ImageIds
 );
 
 public record ProductDto(

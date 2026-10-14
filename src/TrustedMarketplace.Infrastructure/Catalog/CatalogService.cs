@@ -3,8 +3,11 @@ using Microsoft.Extensions.Logging;
 using TrustedMarketplace.Application.Catalog;
 using TrustedMarketplace.Application.Catalog.Dtos;
 using TrustedMarketplace.Application.Common.Exceptions;
+using TrustedMarketplace.Application.Common.Interfaces;
+using TrustedMarketplace.Application.Common.Security;
 using TrustedMarketplace.Application.Subscriptions;
 using TrustedMarketplace.Domain.Catalog;
+using TrustedMarketplace.Domain.Common.Exceptions;
 using TrustedMarketplace.Domain.Stores;
 using TrustedMarketplace.Infrastructure.Persistence;
 
@@ -14,15 +17,18 @@ public class CatalogService : ICatalogService
 {
     private readonly AppDbContext _dbContext;
     private readonly ISubscriptionService _subscriptionService;
+    private readonly IFileStorageService _fileStorageService;
     private readonly ILogger<CatalogService> _logger;
 
     public CatalogService(
         AppDbContext dbContext,
         ISubscriptionService subscriptionService,
+        IFileStorageService fileStorageService,
         ILogger<CatalogService> logger)
     {
         _dbContext = dbContext;
         _subscriptionService = subscriptionService;
+        _fileStorageService = fileStorageService;
         _logger = logger;
     }
 
@@ -290,6 +296,263 @@ public class CatalogService : ICatalogService
         return products.Select(ToDto).ToList();
     }
 
+    public async Task<ProductImageDto> UploadProductImageAsync(
+        Guid sellerUserId,
+        Guid productId,
+        Stream fileStream,
+        string fileName,
+        string contentType,
+        long fileLength,
+        CancellationToken ct = default)
+    {
+        var product = await _dbContext.Products
+            .Include(p => p.Images)
+            .FirstOrDefaultAsync(p => p.Id == productId, ct);
+
+        if (product == null)
+        {
+            throw new NotFoundException($"Product with ID '{productId}' was not found.");
+        }
+
+        if (product.SellerUserId != sellerUserId)
+        {
+            throw new ForbiddenException("FORBIDDEN", "You do not have permission to manage images for this product (SEC-05).");
+        }
+
+        if (product.Status == ProductStatus.Archived)
+        {
+            throw new DomainException("Cannot upload images to an archived product.");
+        }
+
+        if (product.Images.Count >= Product.MaxImagesPerProduct)
+        {
+            throw new DomainException($"Cannot upload more than {Product.MaxImagesPerProduct} images per product.");
+        }
+
+        var (isValid, detectedMimeType, errorMessage) = FileValidationService.ValidateProductImage(
+            fileStream,
+            fileName,
+            contentType,
+            fileLength);
+
+        if (!isValid)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["File"] = new[] { errorMessage ?? "Invalid image format or size." }
+            });
+        }
+
+        // Save safely to dedicated product image directory
+        var storageKey = await _fileStorageService.SaveProductImageAsync(
+            fileStream,
+            fileName,
+            detectedMimeType,
+            ct);
+
+        var image = product.AddImage(
+            storageKey,
+            sortOrder: -1,
+            originalFileName: fileName,
+            mimeType: detectedMimeType,
+            fileSizeBytes: fileLength);
+
+        _dbContext.ProductImages.Add(image);
+        await _dbContext.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Uploaded product image {ImageId} for product {ProductId} by seller {SellerId}",
+            image.Id,
+            productId,
+            sellerUserId);
+
+        return ToImageDto(product.Id, image);
+    }
+
+    public async Task DeleteProductImageAsync(
+        Guid sellerUserId,
+        Guid productId,
+        Guid imageId,
+        CancellationToken ct = default)
+    {
+        var product = await _dbContext.Products
+            .Include(p => p.Images)
+            .FirstOrDefaultAsync(p => p.Id == productId, ct);
+
+        if (product == null)
+        {
+            throw new NotFoundException($"Product with ID '{productId}' was not found.");
+        }
+
+        if (product.SellerUserId != sellerUserId)
+        {
+            throw new ForbiddenException("FORBIDDEN", "You do not have permission to delete images from this product (SEC-05).");
+        }
+
+        if (product.Status == ProductStatus.Archived)
+        {
+            throw new DomainException("Cannot modify an archived product.");
+        }
+
+        var removedImage = product.RemoveImage(imageId);
+        _dbContext.ProductImages.Remove(removedImage);
+
+        await _dbContext.SaveChangesAsync(ct);
+
+        // Delete physical file safely
+        await _fileStorageService.DeleteProductImageAsync(removedImage.StorageKey, ct);
+
+        _logger.LogInformation(
+            "Deleted product image {ImageId} from product {ProductId} by seller {SellerId}",
+            imageId,
+            productId,
+            sellerUserId);
+    }
+
+    public async Task<ProductImageDto> SetPrimaryProductImageAsync(
+        Guid sellerUserId,
+        Guid productId,
+        Guid imageId,
+        CancellationToken ct = default)
+    {
+        var product = await _dbContext.Products
+            .Include(p => p.Images)
+            .FirstOrDefaultAsync(p => p.Id == productId, ct);
+
+        if (product == null)
+        {
+            throw new NotFoundException($"Product with ID '{productId}' was not found.");
+        }
+
+        if (product.SellerUserId != sellerUserId)
+        {
+            throw new ForbiddenException("FORBIDDEN", "You do not have permission to manage images for this product (SEC-05).");
+        }
+
+        if (product.Status == ProductStatus.Archived)
+        {
+            throw new DomainException("Cannot modify an archived product.");
+        }
+
+        var primaryImage = product.SetPrimaryImage(imageId);
+        await _dbContext.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Set product image {ImageId} as primary for product {ProductId}",
+            imageId,
+            productId);
+
+        return ToImageDto(product.Id, primaryImage);
+    }
+
+    public async Task<IReadOnlyList<ProductImageDto>> ReorderProductImagesAsync(
+        Guid sellerUserId,
+        Guid productId,
+        IReadOnlyList<Guid> imageIds,
+        CancellationToken ct = default)
+    {
+        var product = await _dbContext.Products
+            .Include(p => p.Images)
+            .FirstOrDefaultAsync(p => p.Id == productId, ct);
+
+        if (product == null)
+        {
+            throw new NotFoundException($"Product with ID '{productId}' was not found.");
+        }
+
+        if (product.SellerUserId != sellerUserId)
+        {
+            throw new ForbiddenException("FORBIDDEN", "You do not have permission to reorder images for this product (SEC-05).");
+        }
+
+        if (product.Status == ProductStatus.Archived)
+        {
+            throw new DomainException("Cannot modify an archived product.");
+        }
+
+        product.ReorderImages(imageIds);
+        await _dbContext.SaveChangesAsync(ct);
+
+        return product.Images
+            .OrderBy(i => i.SortOrder)
+            .Select(i => ToImageDto(product.Id, i))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<ProductImageDto>> GetProductImagesAsync(
+        Guid productId,
+        Guid? callerUserId = null,
+        CancellationToken ct = default)
+    {
+        var product = await _dbContext.Products
+            .Include(p => p.Images)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == productId, ct);
+
+        if (product == null)
+        {
+            throw new NotFoundException($"Product with ID '{productId}' was not found.");
+        }
+
+        if (product.Status != ProductStatus.Published)
+        {
+            if (!callerUserId.HasValue || product.SellerUserId != callerUserId.Value)
+            {
+                throw new NotFoundException($"Product with ID '{productId}' was not found.");
+            }
+        }
+
+        return product.Images
+            .OrderBy(i => i.SortOrder)
+            .Select(i => ToImageDto(product.Id, i))
+            .ToList();
+    }
+
+    public async Task<(Stream Stream, string ContentType, string FileName, bool IsPublished)> GetProductImageContentAsync(
+        Guid productId,
+        Guid imageId,
+        Guid? callerUserId = null,
+        CancellationToken ct = default)
+    {
+        var product = await _dbContext.Products
+            .Include(p => p.Images)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == productId, ct);
+
+        if (product == null)
+        {
+            throw new NotFoundException($"Product with ID '{productId}' was not found.");
+        }
+
+        if (product.Status != ProductStatus.Published)
+        {
+            if (!callerUserId.HasValue || product.SellerUserId != callerUserId.Value)
+            {
+                throw new NotFoundException($"Product with ID '{productId}' was not found.");
+            }
+        }
+
+        var image = product.Images.FirstOrDefault(i => i.Id == imageId);
+        if (image == null)
+        {
+            throw new NotFoundException($"Image with ID '{imageId}' was not found on product '{productId}'.");
+        }
+
+        var stream = await _fileStorageService.GetProductImageAsync(image.StorageKey, ct);
+        if (stream == null)
+        {
+            _logger.LogWarning("Product image file not found on disk for storage key {Key}", image.StorageKey);
+            throw new NotFoundException("Image content file was not found on storage.");
+        }
+
+        var fileName = !string.IsNullOrWhiteSpace(image.OriginalFileName)
+            ? image.OriginalFileName
+            : Path.GetFileName(image.StorageKey);
+
+        var isPublished = product.Status == ProductStatus.Published;
+        return (stream, image.MimeType, fileName, isPublished);
+    }
+
     private static ProductDto ToDto(Product p) =>
         new(
             p.Id,
@@ -305,5 +568,19 @@ public class CatalogService : ICatalogService
             p.Condition.ToString(),
             p.Status.ToString(),
             p.CreatedAtUtc,
-            p.Images.OrderBy(i => i.SortOrder).Select(i => new ProductImageDto(i.Id, i.StorageKey, i.SortOrder)).ToList());
+            p.Images
+                .OrderBy(i => i.SortOrder)
+                .Select(i => ToImageDto(p.Id, i))
+                .ToList());
+
+    private static ProductImageDto ToImageDto(Guid productId, ProductImage i) =>
+        new(
+            i.Id,
+            i.StorageKey,
+            i.SortOrder,
+            i.IsPrimary,
+            $"/api/v1/products/{productId}/images/{i.Id}/content",
+            i.OriginalFileName,
+            i.MimeType,
+            i.FileSizeBytes);
 }

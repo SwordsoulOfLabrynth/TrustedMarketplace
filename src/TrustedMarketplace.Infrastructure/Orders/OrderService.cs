@@ -32,7 +32,7 @@ public class OrderService : IOrderService
         }
 
         var product = await _dbContext.Products
-            .AsNoTracking()
+            .Include(p => p.Images)
             .FirstOrDefaultAsync(p => p.Id == request.ProductId && p.Status == ProductStatus.Published, ct);
 
         if (product == null)
@@ -70,13 +70,15 @@ public class OrderService : IOrderService
 
         _logger.LogInformation("Order {OrderId} placed by buyer {BuyerId} for seller {SellerId}", order.Id, buyerUserId, product.SellerUserId);
 
-        return ToDto(order);
+        return (await GetOrderByIdAsync(order.Id, buyerUserId, isAdmin: false, ct))!;
     }
 
     public async Task<OrderDto?> GetOrderByIdAsync(Guid orderId, Guid callerUserId, bool isAdmin, CancellationToken ct = default)
     {
         var order = await _dbContext.Orders
             .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p!.Images)
             .Include(o => o.History)
             .AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == orderId, ct);
@@ -97,6 +99,8 @@ public class OrderService : IOrderService
     {
         var orders = await _dbContext.Orders
             .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p!.Images)
             .Include(o => o.History)
             .AsNoTracking()
             .Where(o => o.BuyerUserId == buyerUserId)
@@ -110,6 +114,8 @@ public class OrderService : IOrderService
     {
         var orders = await _dbContext.Orders
             .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p!.Images)
             .Include(o => o.History)
             .AsNoTracking()
             .Where(o => o.SellerUserId == sellerUserId)
@@ -123,6 +129,8 @@ public class OrderService : IOrderService
     {
         var order = await _dbContext.Orders
             .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p!.Images)
             .Include(o => o.History)
             .FirstOrDefaultAsync(o => o.Id == orderId, ct);
 
@@ -147,6 +155,8 @@ public class OrderService : IOrderService
     {
         var order = await _dbContext.Orders
             .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p!.Images)
             .Include(o => o.History)
             .FirstOrDefaultAsync(o => o.Id == orderId, ct);
 
@@ -171,6 +181,8 @@ public class OrderService : IOrderService
     {
         var order = await _dbContext.Orders
             .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p!.Images)
             .Include(o => o.History)
             .FirstOrDefaultAsync(o => o.Id == orderId, ct);
 
@@ -198,6 +210,8 @@ public class OrderService : IOrderService
     {
         var order = await _dbContext.Orders
             .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p!.Images)
             .Include(o => o.History)
             .FirstOrDefaultAsync(o => o.Id == orderId, ct);
 
@@ -227,6 +241,8 @@ public class OrderService : IOrderService
     {
         var order = await _dbContext.Orders
             .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p!.Images)
             .Include(o => o.History)
             .FirstOrDefaultAsync(o => o.Id == orderId, ct);
 
@@ -278,13 +294,21 @@ public class OrderService : IOrderService
             o.ShippedAtUtc,
             o.CompletedAtUtc,
             o.CreatedAtUtc,
-            o.Items.Select(i => new OrderItemDto(
-                i.Id,
-                i.ProductId,
-                i.ProductTitleSnapshot,
-                i.UnitPriceSnapshot,
-                i.Quantity,
-                i.ConditionSnapshot)).ToList(),
+            o.Items.Select(i => {
+                var primaryImg = i.Product?.Images.OrderBy(img => img.SortOrder).FirstOrDefault(img => img.IsPrimary)
+                              ?? i.Product?.Images.OrderBy(img => img.SortOrder).FirstOrDefault();
+                var primaryImgUrl = (i.ProductId != null && primaryImg != null)
+                    ? $"/api/v1/products/{i.ProductId}/images/{primaryImg.Id}/content"
+                    : null;
+                return new OrderItemDto(
+                    i.Id,
+                    i.ProductId,
+                    i.ProductTitleSnapshot,
+                    i.UnitPriceSnapshot,
+                    i.Quantity,
+                    i.ConditionSnapshot,
+                    primaryImgUrl);
+            }).ToList(),
             o.History.OrderBy(h => h.CreatedAtUtc).Select(h => new OrderStatusHistoryDto(
                 h.Id,
                 h.ActorUserId,

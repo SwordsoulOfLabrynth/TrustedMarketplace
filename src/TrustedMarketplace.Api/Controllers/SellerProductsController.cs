@@ -95,6 +95,96 @@ public class SellerProductsController : ControllerBase
         return Ok(products);
     }
 
+    /// <summary>
+    /// Uploads an image for an existing product listing.
+    /// Enforces resource ownership (SEC-05), format allowlisting (JPEG, PNG, WebP), magic-byte validation, and max file limits.
+    /// </summary>
+    [HttpPost("{id:guid}/images")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(ProductImageDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UploadProductImage(Guid id, IFormFile? file, CancellationToken ct)
+    {
+        if (file == null || file.Length == 0)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["file"] = new[] { "An image file must be provided." }
+            });
+        }
+
+        var sellerUserId = GetCurrentUserId();
+        await using var stream = file.OpenReadStream();
+
+        var imageDto = await _catalogService.UploadProductImageAsync(
+            sellerUserId,
+            id,
+            stream,
+            file.FileName,
+            file.ContentType,
+            file.Length,
+            ct);
+
+        return StatusCode(StatusCodes.Status201Created, imageDto);
+    }
+
+    /// <summary>
+    /// Removes a product image and its physical file.
+    /// Enforces resource ownership (SEC-05).
+    /// </summary>
+    [HttpDelete("{id:guid}/images/{imageId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteProductImage(Guid id, Guid imageId, CancellationToken ct)
+    {
+        var sellerUserId = GetCurrentUserId();
+        await _catalogService.DeleteProductImageAsync(sellerUserId, id, imageId, ct);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Sets an image as the primary cover image (SortOrder = 0) for the product.
+    /// Enforces resource ownership (SEC-05).
+    /// </summary>
+    [HttpPut("{id:guid}/images/{imageId:guid}/primary")]
+    [HttpPost("{id:guid}/images/{imageId:guid}/primary")]
+    [ProducesResponseType(typeof(ProductImageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetPrimaryProductImage(Guid id, Guid imageId, CancellationToken ct)
+    {
+        var sellerUserId = GetCurrentUserId();
+        var primary = await _catalogService.SetPrimaryProductImageAsync(sellerUserId, id, imageId, ct);
+        return Ok(primary);
+    }
+
+    /// <summary>
+    /// Reorders product images.
+    /// Enforces resource ownership (SEC-05).
+    /// </summary>
+    [HttpPut("{id:guid}/images/reorder")]
+    [ProducesResponseType(typeof(IReadOnlyList<ProductImageDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ReorderProductImages(Guid id, [FromBody] ReorderProductImagesRequest request, CancellationToken ct)
+    {
+        if (request == null || request.ImageIds == null || request.ImageIds.Count == 0)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["imageIds"] = new[] { "A list of image IDs is required for reordering." }
+            });
+        }
+
+        var sellerUserId = GetCurrentUserId();
+        var reordered = await _catalogService.ReorderProductImagesAsync(sellerUserId, id, request.ImageIds, ct);
+        return Ok(reordered);
+    }
+
     private Guid GetCurrentUserId()
     {
         var rawId = User.FindFirstValue(ClaimTypes.NameIdentifier);

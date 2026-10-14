@@ -82,4 +82,94 @@ public static class FileValidationService
             stream.Position = initialPosition;
         }
     }
+
+    public static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".webp"
+    };
+
+    public static (bool IsValid, string DetectedMimeType, string? ErrorMessage) ValidateProductImage(
+        Stream stream,
+        string fileName,
+        string declaredContentType,
+        long fileSizeBytes,
+        long maxFileSizeBytes = MaxFileSizeBytes)
+    {
+        if (fileSizeBytes <= 0)
+        {
+            return (false, string.Empty, "Uploaded product image is empty.");
+        }
+
+        if (fileSizeBytes > maxFileSizeBytes)
+        {
+            return (false, string.Empty, $"Product image size exceeds the {maxFileSizeBytes / 1024 / 1024} MB limit.");
+        }
+
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return (false, string.Empty, "Filename is required.");
+        }
+
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
+        if (!AllowedImageExtensions.Contains(ext))
+        {
+            return (false, string.Empty, $"File extension '{ext}' is not supported. Only JPEG (.jpg, .jpeg), PNG (.png), and WebP (.webp) images are permitted.");
+        }
+
+        if (!stream.CanRead || !stream.CanSeek)
+        {
+            return (false, string.Empty, "File stream must be readable and seekable.");
+        }
+
+        var initialPosition = stream.Position;
+        try
+        {
+            stream.Position = 0;
+            var buffer = new byte[16];
+            var bytesRead = stream.Read(buffer, 0, buffer.Length);
+
+            if (bytesRead < 4)
+            {
+                return (false, string.Empty, "File is too short to determine image format signature.");
+            }
+
+            // Check JPEG (FF D8 FF)
+            if (buffer[0] == JpegHeader[0] && buffer[1] == JpegHeader[1] && buffer[2] == JpegHeader[2])
+            {
+                if (ext is not (".jpg" or ".jpeg"))
+                {
+                    return (false, string.Empty, "File content is JPEG but extension is not .jpg/.jpeg.");
+                }
+                return (true, "image/jpeg", null);
+            }
+
+            // Check PNG (89 50 4E 47 0D 0A 1A 0A)
+            if (bytesRead >= 8 && buffer.Take(8).SequenceEqual(PngHeader))
+            {
+                if (ext != ".png")
+                {
+                    return (false, string.Empty, "File content is PNG but extension is not .png.");
+                }
+                return (true, "image/png", null);
+            }
+
+            // Check WEBP (RIFF....WEBP)
+            if (bytesRead >= 12 &&
+                buffer.Take(4).SequenceEqual(RiffHeader) &&
+                buffer.Skip(8).Take(4).SequenceEqual(WebpHeader))
+            {
+                if (ext != ".webp")
+                {
+                    return (false, string.Empty, "File content is WebP but extension is not .webp.");
+                }
+                return (true, "image/webp", null);
+            }
+
+            return (false, string.Empty, "File header does not match valid JPEG, PNG, or WebP image signatures.");
+        }
+        finally
+        {
+            stream.Position = initialPosition;
+        }
+    }
 }

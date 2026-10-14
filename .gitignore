@@ -494,3 +494,7 @@ secrets.json
 # Visual Studio Code
 .vscode/
 
+# Verification artifacts & scratch scripts
+screenshots/
+*.sql
+

@@ -15,7 +15,8 @@ public record OrderItemDto(
     string ProductTitle,
     decimal UnitPrice,
     int Quantity,
-    string Condition
+    string Condition,
+    string? PrimaryImageUrl = null
 );
 
 public record OrderStatusHistoryDto(

@@ -22,6 +22,20 @@ public class ProductImageConfiguration : IEntityTypeConfiguration<ProductImage>
         builder.Property(i => i.SortOrder)
             .IsRequired();
 
+        builder.Property(i => i.OriginalFileName)
+            .IsRequired()
+            .HasMaxLength(255)
+            .HasDefaultValue("");
+
+        builder.Property(i => i.MimeType)
+            .IsRequired()
+            .HasMaxLength(100)
+            .HasDefaultValue("image/jpeg");
+
+        builder.Property(i => i.FileSizeBytes)
+            .IsRequired()
+            .HasDefaultValue(0L);
+
         builder.Property(i => i.CreatedAtUtc)
             .IsRequired();
 

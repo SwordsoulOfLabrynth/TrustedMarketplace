@@ -92,12 +92,78 @@ public class Product : BaseEntity
         Status = ProductStatus.Archived;
     }
 
-    public ProductImage AddImage(string storageKey, int sortOrder = 0)
+    public const int MaxImagesPerProduct = 8;
+
+    public ProductImage AddImage(
+        string storageKey,
+        int sortOrder = -1,
+        string originalFileName = "",
+        string mimeType = "image/jpeg",
+        long fileSizeBytes = 0)
     {
-        var image = new ProductImage(Id, storageKey, sortOrder);
+        if (_images.Count >= MaxImagesPerProduct)
+            throw new DomainException($"A product cannot have more than {MaxImagesPerProduct} images.");
+
+        var calculatedSortOrder = sortOrder >= 0
+            ? sortOrder
+            : (_images.Count == 0 ? 0 : _images.Max(i => i.SortOrder) + 1);
+
+        var image = new ProductImage(Id, storageKey, calculatedSortOrder, originalFileName, mimeType, fileSizeBytes);
         _images.Add(image);
         return image;
     }
+
+    public ProductImage RemoveImage(Guid imageId)
+    {
+        var image = _images.FirstOrDefault(i => i.Id == imageId);
+        if (image == null)
+            throw new DomainException("Image was not found on this product.");
+
+        _images.Remove(image);
+
+        // Normalize sort orders: ensure primary image exists if images remain
+        var remaining = _images.OrderBy(i => i.SortOrder).ToList();
+        for (var idx = 0; idx < remaining.Count; idx++)
+        {
+            remaining[idx].SetSortOrder(idx);
+        }
+
+        return image;
+    }
+
+    public ProductImage SetPrimaryImage(Guid imageId)
+    {
+        var image = _images.FirstOrDefault(i => i.Id == imageId);
+        if (image == null)
+            throw new DomainException("Image was not found on this product.");
+
+        image.SetSortOrder(0);
+        var others = _images.Where(i => i.Id != imageId).OrderBy(i => i.SortOrder).ToList();
+        for (var idx = 0; idx < others.Count; idx++)
+        {
+            others[idx].SetSortOrder(idx + 1);
+        }
+
+        return image;
+    }
+
+    public void ReorderImages(IReadOnlyList<Guid> imageIds)
+    {
+        if (imageIds == null || imageIds.Count != _images.Count)
+            throw new DomainException("Reorder list must contain all images of the product.");
+
+        var idSet = new HashSet<Guid>(imageIds);
+        if (_images.Any(i => !idSet.Contains(i.Id)))
+            throw new DomainException("Reorder list does not match product images.");
+
+        for (var idx = 0; idx < imageIds.Count; idx++)
+        {
+            var img = _images.First(i => i.Id == imageIds[idx]);
+            img.SetSortOrder(idx);
+        }
+    }
+
+    public ProductImage? GetImage(Guid imageId) => _images.FirstOrDefault(i => i.Id == imageId);
 
     private static void ValidateInputs(string title, string description, decimal priceAmount)
     {
