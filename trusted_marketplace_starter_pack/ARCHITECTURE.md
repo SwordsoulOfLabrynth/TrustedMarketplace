@@ -85,26 +85,19 @@ TrustedMarketplace/
 6. **Reviews:** Transaction-linked order reviews, ratings, and moderation.
 7. **Complaints:** Allegation submission, evidence handling, admin investigation, and dispute resolution.
 8. **Trust:** Read-model calculation exposing explainable counts and review averages with mandatory disclaimers.
-9. **Subscriptions:** Admin-managed subscription plans and tier assignments (mock entitlements).
+9. **Subscriptions:** Platform QR payment submissions (KBZPay, WavePay), duplicate reference guard, admin payment verification queue, and dynamic listing quota elevation.
+10. **Multilingual Search:** Pluggable `IEmbeddingProvider` abstraction coordinating upstream inference (`NvidiaEmbeddingProvider` for NVIDIA NIM) with zero-dependency in-process failover (`LocalConceptHashEmbeddingProvider` with 10 bilingual craft clusters + DJB2 n-gram projection). Serves hybrid cosine similarity + BM25-style lexical ranking with word boundary protection.
 
 *Communication Rule:* Modules communicate in-process via C# service interfaces. Modules must not execute cross-boundary SQL mutations against entities owned by other modules.
 
 ---
 
-## 4. Authentication & Client Topology Analysis
+## 4. Authentication & Client Topology
 
-### Workspace Inspection Finding:
-Inspection of the current workspace confirms that **no frontend repository, build script, or deployment manifest currently exists** in `D:\Project\TrustedMarketplace`.
-
-### Authentication Strategy Trade-offs:
-1. **Option A: JWT Bearer Access Token in Memory + HttpOnly Refresh Token Cookie (Recommended Baseline)**
-   - *Topology:* Detached Single Page Application (e.g. Next.js / Vite on Vercel/Netlify or `localhost:3000`) communicating with ASP.NET Core API (`localhost:5000` or `api.domain.com`).
-   - *Rationale:* Decoupled SPAs encounter strict browser cross-site cookie restrictions unless complex same-parent apex domain setups are configured. In-memory access tokens protect against local-storage XSS theft, while HttpOnly refresh cookies enable secure session extension.
-2. **Option B: ASP.NET Core Same-Origin Cookies + CSRF Protection**
-   - *Topology:* Server-rendered web application or frontend deployed behind a unified reverse proxy / BFF (e.g. Nginx or Next.js server proxying `/api/*`).
-   - *Rationale:* Native, zero-token client management. Requires anti-forgery headers on state-changing requests.
-
-*Working Assumption:* Implement ASP.NET Core Identity with JWT Access Tokens + HttpOnly Refresh Token cookies as the default to support decoupled clients, subject to final team sign-off once the frontend architecture is established.
+### Production Topology Baseline:
+- **Frontend Client:** Next.js 15 (React 19) in `/frontend` with static prerendering, server actions, and standalone Node.js runtime.
+- **Authentication:** ASP.NET Core Identity with PBKDF2 HMAC-SHA512 hashing, issuing 15-minute JWT Bearer access tokens held in memory, and single-use rotating 7-day refresh tokens set in `HttpOnly`, `SameSite=Lax`, `Secure` cookies.
+- **Reverse Proxy Architecture:** When deployed on a single host or VPS, a reverse proxy (Caddy / Nginx) routes `/api/*` to the ASP.NET Core container (`:8080`) and all other routes to Next.js (`:3000`), ensuring apex-domain cookie sharing without cross-origin third-party cookie blocking.
 
 ---
 
@@ -131,11 +124,17 @@ Inspection of the current workspace confirms that **no frontend repository, buil
 
 ---
 
-## 7. Requires Team Approval
+## 7. Containerization & Production Deployment
 
-The following architectural decisions are unresolved and require team sign-off:
+- **ASP.NET Core API Container:** Multi-stage `src/TrustedMarketplace.Api/Dockerfile` using `mcr.microsoft.com/dotnet/aspnet:10.0` running as non-root `app` user with native health check.
+- **Next.js Frontend Container:** Multi-stage `frontend/Dockerfile` using `node:20-alpine` leveraging `output: "standalone"` running as non-root `nextjs` user.
+- **Orchestration:** `docker-compose.prod.yml` defines the multi-container stack (`postgres`, `api`, `frontend`) with named volumes for database persistence (`postgres_data`), private evidence (`evidence_storage`), and public media (`media_storage`).
+- **Secret Management:** Production secrets are injected exclusively through environment variables (`.env.production`).
 
-1. **Frontend Client Topology:** Confirmation whether the frontend will be a decoupled SPA (confirming Option A: JWT + Refresh Cookie) or a reverse-proxied app (confirming Option B: Cookies).
-2. **Evidence Retention & Purging Schedule:** Proposal to delete rejected application files after 30 days and closed account files after 90 days.
-3. **Staging / Production Host Compatibility:** Verification that the target hosting platform supports Docker containers with the .NET 10 runtime (`mcr.microsoft.com/dotnet/aspnet:10.0`).
-4. **Email Confirmation in Development:** Whether to bypass email verification links for the student demo.
+---
+
+## 8. Requires Team Approval
+
+1. **Production Hosting Target Selection:** Decision on deploying to a single Linux VPS (Hetzner / DigitalOcean with Docker Compose or Coolify) vs managed cloud PaaS (Railway / Render).
+2. **NVIDIA API Commercial Plan:** Deciding whether to subscribe to a paid NVIDIA NIM inference tier or rely on the local concept-hash projection engine.
+3. **Domain Name & DNS:** Purchasing and pointing domain (e.g., `trustedmarketplace.mm`) to host IP address.

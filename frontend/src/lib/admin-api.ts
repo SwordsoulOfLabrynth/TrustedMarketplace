@@ -2,11 +2,13 @@ import { apiClient } from "@/lib/api-client";
 import {
   AdminComplaintDecisionRequest,
   AdminDecisionRequest,
+  AdminStoreReverificationRequest,
   ComplaintDto,
   OrderDto,
   ResolveDisputeRequest,
   SellerApplicationDto,
   SellerSubscriptionDto,
+  StoreProfileDto,
   VerifySubscriptionPaymentRequest,
 } from "@/types/api";
 
@@ -123,6 +125,31 @@ export const adminApi = {
   ): Promise<SellerSubscriptionDto> {
     return await apiClient.post<SellerSubscriptionDto>(
       `/api/v1/admin/subscriptions/${id}/verify`,
+      request
+    );
+  },
+
+  /**
+   * Fetches seller store profiles for administrative re-verification review.
+   */
+  async getSellerStores(status?: string): Promise<StoreProfileDto[]> {
+    const params = new URLSearchParams();
+    if (status && status !== "All") params.set("status", status);
+    const query = params.toString();
+    return await apiClient.get<StoreProfileDto[]>(
+      `/api/v1/admin/seller-stores${query ? `?${query}` : ""}`
+    );
+  },
+
+  /**
+   * Approves or rejects a store profile change pending re-verification.
+   */
+  async processStoreReverificationDecision(
+    sellerUserId: string,
+    request: AdminStoreReverificationRequest
+  ): Promise<StoreProfileDto> {
+    return await apiClient.post<StoreProfileDto>(
+      `/api/v1/admin/seller-stores/${sellerUserId}/decision`,
       request
     );
   },

@@ -159,4 +159,105 @@ public class SellerStoreEndpointsTests : IClassFixture<WebApplicationFactory<Pro
             Assert.Contains("Automatic reverification triggered", audit.Reason);
         }
     }
+
+    [Fact]
+    public async Task AdminStoreReverification_Approve_RestoresVerifiedStatus_AndLogsAudit()
+    {
+        var (sellerToken, sellerUserId) = await RegisterAndLoginUserAsync();
+        var adminToken = await CreateAdminAndGetTokenAsync();
+        var uniqueId = Guid.NewGuid().ToString("N")[..6];
+
+        // Apply and approve seller
+        using var appReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/seller-applications");
+        appReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sellerToken);
+        appReq.Content = JsonContent.Create(new CreateSellerApplicationRequest($"Original Store {uniqueId}", "ArtisanWorkshop", "0911223344"));
+        var appResp = await _client.SendAsync(appReq);
+        var createdApp = await appResp.Content.ReadFromJsonAsync<SellerApplicationDto>();
+        Assert.NotNull(createdApp);
+
+        using var decReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/admin/seller-applications/{createdApp.Id}/decision");
+        decReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        decReq.Content = JsonContent.Create(new AdminDecisionRequest("Approved", "Verified"));
+        await _client.SendAsync(decReq);
+
+        // Rename store -> shifts to PendingReverification
+        using var renameReq = new HttpRequestMessage(HttpMethod.Put, "/api/v1/seller/store");
+        renameReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sellerToken);
+        renameReq.Content = JsonContent.Create(new UpdateStoreProfileRequest($"Renamed Store {uniqueId}", "New bio", "0911223344", "Mandalay"));
+        var renameResp = await _client.SendAsync(renameReq);
+        Assert.Equal(HttpStatusCode.OK, renameResp.StatusCode);
+
+        // Admin lists stores in PendingReverification
+        using var listReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/seller-stores?status=PendingReverification");
+        listReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        var listResp = await _client.SendAsync(listReq);
+        Assert.Equal(HttpStatusCode.OK, listResp.StatusCode);
+        var pendingStores = await listResp.Content.ReadFromJsonAsync<List<StoreProfileDto>>();
+        Assert.NotNull(pendingStores);
+        Assert.Contains(pendingStores, s => s.SellerUserId == sellerUserId);
+
+        // Admin approves re-verification
+        using var reverifyReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/admin/seller-stores/{sellerUserId}/decision");
+        reverifyReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        reverifyReq.Content = JsonContent.Create(new AdminStoreReverificationRequest("Approved", "Verified business documents."));
+        var reverifyResp = await _client.SendAsync(reverifyReq);
+        Assert.Equal(HttpStatusCode.OK, reverifyResp.StatusCode);
+        var reverifiedStore = await reverifyResp.Content.ReadFromJsonAsync<StoreProfileDto>();
+        Assert.NotNull(reverifiedStore);
+        Assert.Equal("Verified", reverifiedStore.VerificationStatus);
+
+        // Verify audit event written
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var audit = await db.AuditEvents
+                .Where(a => a.Action == "SellerStoreReverification_Approved" && (a.TargetId == reverifiedStore.SellerUserId.ToString() || (a.Reason != null && a.Reason.Contains("Verified business documents"))))
+                .FirstOrDefaultAsync();
+            Assert.NotNull(audit);
+        }
+    }
+
+    [Fact]
+    public async Task AdminStoreReverification_Reject_SetsReverificationRejected_AndLogsAudit()
+    {
+        var (sellerToken, sellerUserId) = await RegisterAndLoginUserAsync();
+        var adminToken = await CreateAdminAndGetTokenAsync();
+        var uniqueId = Guid.NewGuid().ToString("N")[..6];
+
+        // Apply and approve seller
+        using var appReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/seller-applications");
+        appReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sellerToken);
+        appReq.Content = JsonContent.Create(new CreateSellerApplicationRequest($"Legit Store {uniqueId}", "ArtisanWorkshop", "0911223344"));
+        var appResp = await _client.SendAsync(appReq);
+        var createdApp = await appResp.Content.ReadFromJsonAsync<SellerApplicationDto>();
+        Assert.NotNull(createdApp);
+
+        using var decReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/admin/seller-applications/{createdApp.Id}/decision");
+        decReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        decReq.Content = JsonContent.Create(new AdminDecisionRequest("Approved", "Verified"));
+        await _client.SendAsync(decReq);
+
+        // Rename store to trademarked brand
+        using var renameReq = new HttpRequestMessage(HttpMethod.Put, "/api/v1/seller/store");
+        renameReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sellerToken);
+        renameReq.Content = JsonContent.Create(new UpdateStoreProfileRequest($"Brand Spoof {uniqueId}", "Bio", "0911223344", "Yangon"));
+        await _client.SendAsync(renameReq);
+
+        // Admin rejects re-verification
+        using var rejectReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/admin/seller-stores/{sellerUserId}/decision");
+        rejectReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        rejectReq.Content = JsonContent.Create(new AdminStoreReverificationRequest("Rejected", "Trademark brand spoofing attempt."));
+        var rejectResp = await _client.SendAsync(rejectReq);
+        Assert.Equal(HttpStatusCode.OK, rejectResp.StatusCode);
+        var rejectedStore = await rejectResp.Content.ReadFromJsonAsync<StoreProfileDto>();
+        Assert.NotNull(rejectedStore);
+        Assert.Equal("ReverificationRejected", rejectedStore.VerificationStatus);
+
+        // Verify non-admin gets 403 Forbidden
+        using var unauthReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/admin/seller-stores/{sellerUserId}/decision");
+        unauthReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sellerToken);
+        unauthReq.Content = JsonContent.Create(new AdminStoreReverificationRequest("Approved", "Hacked attempt"));
+        var unauthResp = await _client.SendAsync(unauthReq);
+        Assert.Equal(HttpStatusCode.Forbidden, unauthResp.StatusCode);
+    }
 }

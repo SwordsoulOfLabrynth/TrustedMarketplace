@@ -59,14 +59,73 @@ public class SellerProfileDomainTests
         Assert.Equal(SellerVerificationStatus.Verified, profile.VerificationStatus);
     }
 
+    [Fact]
+    public void ApproveReverification_WhenPending_SetsStatusToVerified()
+    {
+        var profile = new SellerProfile(Guid.NewGuid(), "Store Name", "0912345678");
+        profile.UpdateProfile("Renamed Store", null, "0912345678", null);
+        Assert.Equal(SellerVerificationStatus.PendingReverification, profile.VerificationStatus);
+
+        profile.ApproveReverification();
+
+        Assert.Equal(SellerVerificationStatus.Verified, profile.VerificationStatus);
+    }
+
+    [Fact]
+    public void ApproveReverification_WhenNotPending_ThrowsDomainException()
+    {
+        var profile = new SellerProfile(Guid.NewGuid(), "Store Name", "0912345678");
+        Assert.Equal(SellerVerificationStatus.Verified, profile.VerificationStatus);
+
+        var ex = Assert.Throws<DomainException>(() => profile.ApproveReverification());
+        Assert.Contains("Cannot approve", ex.Message);
+    }
+
+    [Fact]
+    public void RejectReverification_WhenPending_SetsStatusToReverificationRejected()
+    {
+        var profile = new SellerProfile(Guid.NewGuid(), "Store Name", "0912345678");
+        profile.UpdateProfile("Brand Spoof Store", null, "0912345678", null);
+        Assert.Equal(SellerVerificationStatus.PendingReverification, profile.VerificationStatus);
+
+        profile.RejectReverification("Potential brand spoofing detected.");
+
+        Assert.Equal(SellerVerificationStatus.ReverificationRejected, profile.VerificationStatus);
+    }
+
+    [Fact]
+    public void RejectReverification_WhenNotPending_ThrowsDomainException()
+    {
+        var profile = new SellerProfile(Guid.NewGuid(), "Store Name", "0912345678");
+        Assert.Equal(SellerVerificationStatus.Verified, profile.VerificationStatus);
+
+        var ex = Assert.Throws<DomainException>(() => profile.RejectReverification("Reason"));
+        Assert.Contains("Cannot reject", ex.Message);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void UpdateProfile_EmptyStoreName_ThrowsDomainException(string invalidName)
+    [InlineData(null)]
+    public void RejectReverification_EmptyReason_ThrowsDomainException(string? invalidReason)
     {
         var profile = new SellerProfile(Guid.NewGuid(), "Store Name", "0912345678");
+        profile.UpdateProfile("Renamed Store", null, "0912345678", null);
 
-        Assert.Throws<DomainException>(() =>
-            profile.UpdateProfile(invalidName, "Bio", "0912345678", "City"));
+        var ex = Assert.Throws<DomainException>(() => profile.RejectReverification(invalidReason!));
+        Assert.Contains("reason is required", ex.Message);
+    }
+
+    [Fact]
+    public void UpdateProfile_WhenReverificationRejected_ChangingName_ResetsToPendingReverification()
+    {
+        var profile = new SellerProfile(Guid.NewGuid(), "Store Name", "0912345678");
+        profile.UpdateProfile("Rejected Store", null, "0912345678", null);
+        profile.RejectReverification("Disallowed name.");
+        Assert.Equal(SellerVerificationStatus.ReverificationRejected, profile.VerificationStatus);
+
+        var changed = profile.UpdateProfile("Legitimate Artisan Store", null, "0912345678", null);
+        Assert.True(changed);
+        Assert.Equal(SellerVerificationStatus.PendingReverification, profile.VerificationStatus);
     }
 }

@@ -59,7 +59,7 @@ export interface StoreProfileDto {
   contactPhone: string;
   cityOrTownship: string | null;
   logoStorageKey: string | null;
-  verificationStatus: "Unverified" | "Verified" | "PendingReverification" | string;
+  verificationStatus: "Unverified" | "Verified" | "PendingReverification" | "ReverificationRejected" | string;
   createdAtUtc: string;
 }
 
@@ -68,6 +68,11 @@ export interface UpdateStoreProfileRequest {
   bio?: string | null;
   contactPhone: string;
   cityOrTownship?: string | null;
+}
+
+export interface AdminStoreReverificationRequest {
+  decision: "Approved" | "Rejected";
+  reason?: string | null;
 }
 
 export interface SellerTrustProfileDto {

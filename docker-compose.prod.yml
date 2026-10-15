@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: trusted-marketplace-db-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-trusted_marketplace_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password required}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: src/TrustedMarketplace.Api/Dockerfile
+    container_name: trusted-marketplace-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB:-trusted_marketplace_prod};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD}
+      Jwt__Issuer: TrustedMarketplace
+      Jwt__Audience: TrustedMarketplaceClient
+      Jwt__Key: ${JWT_SECRET_KEY:?JWT secret key required}
+      Jwt__AccessTokenExpirationMinutes: "15"
+      Jwt__RefreshTokenExpirationDays: "7"
+      Storage__Provider: Local
+      Storage__LocalPrivateRoot: /app/storage/private_evidence
+      Storage__LocalPublicRoot: /app/storage/public_media
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+    ports:
+      - "8080:8080"
+    volumes:
+      - evidence_storage:/app/storage/private_evidence
+      - media_storage:/app/storage/public_media
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: trusted-marketplace-frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+  evidence_storage:
+  media_storage:

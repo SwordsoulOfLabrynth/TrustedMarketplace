@@ -74,7 +74,8 @@ public class SellerProfile : BaseEntity
         var storeNameChanged = !string.Equals(StoreName, trimmedName, StringComparison.OrdinalIgnoreCase);
 
         StoreName = trimmedName;
-        if (storeNameChanged)
+        var needsReverification = storeNameChanged || VerificationStatus == SellerVerificationStatus.ReverificationRejected;
+        if (needsReverification)
         {
             Slug = GenerateSlug(StoreName);
             VerificationStatus = SellerVerificationStatus.PendingReverification;
@@ -84,12 +85,35 @@ public class SellerProfile : BaseEntity
         ContactPhone = newContactPhone.Trim();
         CityOrTownship = newCityOrTownship?.Trim();
 
-        return storeNameChanged;
+        return needsReverification;
     }
 
     public void MarkVerified()
     {
         VerificationStatus = SellerVerificationStatus.Verified;
+    }
+
+    public void ApproveReverification()
+    {
+        if (VerificationStatus != SellerVerificationStatus.PendingReverification &&
+            VerificationStatus != SellerVerificationStatus.ReverificationRejected)
+        {
+            throw new DomainException($"Cannot approve re-verification for store in '{VerificationStatus}' status.");
+        }
+        VerificationStatus = SellerVerificationStatus.Verified;
+    }
+
+    public void RejectReverification(string reason)
+    {
+        if (VerificationStatus != SellerVerificationStatus.PendingReverification)
+        {
+            throw new DomainException($"Cannot reject re-verification for store in '{VerificationStatus}' status.");
+        }
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new DomainException("A reason is required when rejecting store re-verification.");
+        }
+        VerificationStatus = SellerVerificationStatus.ReverificationRejected;
     }
 
     public static string GenerateSlug(string text)

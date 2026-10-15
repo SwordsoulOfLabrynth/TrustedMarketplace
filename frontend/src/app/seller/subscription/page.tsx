@@ -642,7 +642,7 @@ export default function SellerSubscriptionPage() {
                     </div>
                     <div className="text-left">
                       <span className="text-xs font-bold text-ink-900 block">KBZPay</span>
-                      <span className="text-[10px] text-ink-500">Official Platform Account</span>
+                      <span className="text-[10px] text-amber-800 font-semibold">Sandbox Simulation</span>
                     </div>
                   </button>
 
@@ -661,9 +661,22 @@ export default function SellerSubscriptionPage() {
                     </div>
                     <div className="text-left">
                       <span className="text-xs font-bold text-ink-900 block">WavePay</span>
-                      <span className="text-[10px] text-ink-500">Official Platform Account</span>
+                      <span className="text-[10px] text-amber-800 font-semibold">Sandbox Simulation</span>
                     </div>
                   </button>
+                </div>
+              </div>
+
+              {/* Demo Sandbox Alert Banner */}
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs flex items-start gap-2.5 shadow-2xs">
+                <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <div className="space-y-1 leading-relaxed">
+                  <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                    <span>Demo Sandbox Simulation · Do Not Transfer Real Funds</span>
+                  </div>
+                  <p className="text-[11px] text-amber-900 leading-normal">
+                    The payment QR codes and recipient accounts shown below are safe test mocks for development and competition evaluation. Do <strong>NOT</strong> scan with a live mobile banking app or transfer real money. You can submit any test reference (e.g. <code className="font-mono bg-amber-100 text-amber-900 px-1 py-0.5 rounded font-semibold">KBZ-TEST-998811</code>) to trigger the administrative verification queue.
+                  </p>
                 </div>
               </div>
 
@@ -672,9 +685,9 @@ export default function SellerSubscriptionPage() {
                 <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="space-y-1.5">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-white text-ink-700 border border-stone-200">
-                        <Building2 className="w-3 h-3 text-stone-500" />
-                        <span>Platform Recipient</span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                        <Building2 className="w-3 h-3 text-amber-700" />
+                        <span>Sandbox Test Account</span>
                       </span>
                       <h4 className="text-sm font-bold text-ink-900">{activeMethod.accountName}</h4>
                       <div className="flex items-center gap-2">

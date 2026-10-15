@@ -30,16 +30,20 @@ import {
   CreditCard,
   Copy,
   Check,
+  Store,
+  MapPin,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { adminApi } from "@/lib/admin-api";
 import { ordersApi } from "@/lib/orders-api";
 import {
   AdminDecisionRequest,
+  AdminStoreReverificationRequest,
   ComplaintDto,
   OrderDto,
   SellerApplicationDto,
   SellerSubscriptionDto,
+  StoreProfileDto,
   VerificationEvidenceDto,
 } from "@/types/api";
 import { MobileViewportContainer } from "@/components/layout/MobileViewportContainer";
@@ -51,7 +55,9 @@ export default function AdminDashboardPage() {
   const { user, isAuthenticated, isLoading: authLoading, isAdmin } = useAuth();
 
   // Navigation Tab State
-  const [activeTab, setActiveTab] = useState<"verifications" | "disputes" | "subscriptions">("verifications");
+  const [activeTab, setActiveTab] = useState<
+    "verifications" | "disputes" | "subscriptions" | "reverifications"
+  >("verifications");
 
   // ==========================================
   // TAB 1: SELLER APPLICATIONS QUEUE STATE
@@ -106,6 +112,24 @@ export default function AdminDashboardPage() {
   } | null>(null);
   const [copiedRef, setCopiedRef] = useState<string | null>(null);
 
+  // ==========================================
+  // TAB 4: STORE RE-VERIFICATIONS QUEUE STATE
+  // ==========================================
+  const [stores, setStores] = useState<StoreProfileDto[]>([]);
+  const [isStoresLoading, setIsStoresLoading] = useState<boolean>(true);
+  const [storesError, setStoresError] = useState<string | null>(null);
+  const [selectedStoreStatus, setSelectedStoreStatus] = useState<string>("All");
+
+  // Store Decision Modal State
+  const [activeStore, setActiveStore] = useState<StoreProfileDto | null>(null);
+  const [storeDecisionAction, setStoreDecisionAction] = useState<"Approved" | "Rejected" | null>(null);
+  const [storeDecisionReason, setStoreDecisionReason] = useState<string>("");
+  const [isDecidingStore, setIsDecidingStore] = useState<boolean>(false);
+  const [storeDecisionFeedback, setStoreDecisionFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
   // ------------------------------------------
   // Data Fetching
   // ------------------------------------------
@@ -148,6 +172,19 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
+  const fetchStores = useCallback(async () => {
+    setIsStoresLoading(true);
+    setStoresError(null);
+    try {
+      const data = await adminApi.getSellerStores();
+      setStores(data);
+    } catch (err: unknown) {
+      setStoresError(err instanceof Error ? err.message : "Failed to load seller stores.");
+    } finally {
+      setIsStoresLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!authLoading) {
       if (!isAuthenticated) {
@@ -156,9 +193,19 @@ export default function AdminDashboardPage() {
         fetchApplications();
         fetchComplaints();
         fetchSubscriptions();
+        fetchStores();
       }
     }
-  }, [authLoading, isAuthenticated, isAdmin, router, fetchApplications, fetchComplaints, fetchSubscriptions]);
+  }, [
+    authLoading,
+    isAuthenticated,
+    isAdmin,
+    router,
+    fetchApplications,
+    fetchComplaints,
+    fetchSubscriptions,
+    fetchStores,
+  ]);
 
   // Load order details when opening complaint modal
   const openComplaintModal = async (complaint: ComplaintDto) => {
@@ -335,6 +382,64 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const openStoreDecisionModal = (
+    store: StoreProfileDto,
+    action: "Approved" | "Rejected"
+  ) => {
+    setActiveStore(store);
+    setStoreDecisionAction(action);
+    setStoreDecisionReason("");
+    setStoreDecisionFeedback(null);
+  };
+
+  const handleStoreDecision = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeStore || !storeDecisionAction) return;
+
+    if (storeDecisionAction === "Rejected" && !storeDecisionReason.trim()) {
+      setStoreDecisionFeedback({
+        type: "error",
+        message: "A rejection reason is required to explain why this store profile update was rejected.",
+      });
+      return;
+    }
+
+    setIsDecidingStore(true);
+    setStoreDecisionFeedback(null);
+
+    try {
+      const updated = await adminApi.processStoreReverificationDecision(activeStore.sellerUserId, {
+        decision: storeDecisionAction,
+        reason: storeDecisionReason.trim() || undefined,
+      });
+
+      setStores((prev) =>
+        prev.map((s) => (s.sellerUserId === activeStore.sellerUserId ? updated : s))
+      );
+
+      setStoreDecisionFeedback({
+        type: "success",
+        message: `Store "${updated.storeName}" has been successfully ${
+          storeDecisionAction === "Approved" ? "approved and restored to Verified status" : "rejected"
+        }.`,
+      });
+
+      setTimeout(() => {
+        setActiveStore(null);
+        setStoreDecisionAction(null);
+        setStoreDecisionReason("");
+        setStoreDecisionFeedback(null);
+      }, 1000);
+    } catch (err: unknown) {
+      setStoreDecisionFeedback({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to record administrative store decision.",
+      });
+    } finally {
+      setIsDecidingStore(false);
+    }
+  };
+
   if (authLoading) {
     return (
       <MobileViewportContainer header={<AppHeader />}>
@@ -423,6 +528,23 @@ export default function AdminDashboardPage() {
           (s) => s.status.toLowerCase() === selectedSubStatus.toLowerCase()
         );
 
+  // Store Re-verifications
+  const totalStoresCount = stores.length;
+  const pendingStoresCount = stores.filter(
+    (s) => s.verificationStatus === "PendingReverification"
+  ).length;
+  const verifiedStoresCount = stores.filter((s) => s.verificationStatus === "Verified").length;
+  const rejectedStoresCount = stores.filter(
+    (s) => s.verificationStatus === "ReverificationRejected"
+  ).length;
+
+  const filteredStores =
+    selectedStoreStatus === "All"
+      ? stores
+      : stores.filter(
+          (s) => s.verificationStatus.toLowerCase() === selectedStoreStatus.toLowerCase()
+        );
+
   return (
     <MobileViewportContainer
       header={<AppHeader />}
@@ -459,14 +581,15 @@ export default function AdminDashboardPage() {
             onClick={() => {
               if (activeTab === "verifications") fetchApplications();
               else if (activeTab === "disputes") fetchComplaints();
-              else fetchSubscriptions();
+              else if (activeTab === "subscriptions") fetchSubscriptions();
+              else fetchStores();
             }}
-            disabled={isAppsLoading || isComplaintsLoading || isSubsLoading}
+            disabled={isAppsLoading || isComplaintsLoading || isSubsLoading || isStoresLoading}
             className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-xs font-semibold text-ink-700 transition-colors shadow-2xs cursor-pointer"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${
-                isAppsLoading || isComplaintsLoading || isSubsLoading ? "animate-spin text-jade-700" : "text-ink-500"
+                isAppsLoading || isComplaintsLoading || isSubsLoading || isStoresLoading ? "animate-spin text-jade-700" : "text-ink-500"
               }`}
             />
             <span>Refresh</span>
@@ -542,6 +665,30 @@ export default function AdminDashboardPage() {
               }`}
             >
               {pendingSubsCount > 0 ? `${pendingSubsCount} pending` : totalSubsCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("reverifications")}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "reverifications"
+                ? "bg-jade-800 text-white shadow-2xs"
+                : "bg-white text-ink-600 hover:bg-stone-100 border border-stone-200"
+            }`}
+          >
+            <Store className="w-4 h-4" />
+            <span>Store Re-verifications</span>
+            <span
+              className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                activeTab === "reverifications"
+                  ? "bg-white/20 text-white"
+                  : pendingStoresCount > 0
+                  ? "bg-amber-100 text-amber-800 font-bold"
+                  : "bg-stone-100 text-ink-700"
+              }`}
+            >
+              {pendingStoresCount > 0 ? `${pendingStoresCount} pending` : totalStoresCount}
             </span>
           </button>
         </div>
@@ -1210,6 +1357,261 @@ export default function AdminDashboardPage() {
         )}
 
         {/* ========================================================================= */}
+        {/* TAB 4 CONTENT: STORE RE-VERIFICATIONS QUEUE                              */}
+        {/* ========================================================================= */}
+        {activeTab === "reverifications" && (
+          <div className="space-y-6 animate-fade-in">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-2xl bg-white border border-stone-200 shadow-2xs space-y-1">
+                <span className="text-[11px] font-semibold text-ink-500 uppercase tracking-wider block">
+                  Total Stores
+                </span>
+                <span className="text-xl font-bold font-mono text-ink-900">{totalStoresCount}</span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200 shadow-2xs space-y-1">
+                <span className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-amber-600 animate-pulse" />
+                  <span>Pending Re-verification</span>
+                </span>
+                <span className="text-xl font-bold font-mono text-amber-900">
+                  {pendingStoresCount}
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200 shadow-2xs space-y-1">
+                <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  <span>Verified Stores</span>
+                </span>
+                <span className="text-xl font-bold font-mono text-emerald-900">
+                  {verifiedStoresCount}
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-red-50/50 border border-red-200 shadow-2xs space-y-1">
+                <span className="text-[11px] font-semibold text-red-800 uppercase tracking-wider block flex items-center gap-1">
+                  <XCircle className="w-3 h-3 text-red-600" />
+                  <span>Re-verification Rejected</span>
+                </span>
+                <span className="text-xl font-bold font-mono text-red-900">{rejectedStoresCount}</span>
+              </div>
+            </div>
+
+            {/* Filter Pills */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-semibold text-ink-500 flex items-center gap-1 mr-1">
+                  <Filter className="w-3.5 h-3.5" />
+                  <span>Filter:</span>
+                </span>
+                {["All", "PendingReverification", "Verified", "ReverificationRejected"].map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => setSelectedStoreStatus(status)}
+                    className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      selectedStoreStatus.toLowerCase() === status.toLowerCase()
+                        ? "bg-jade-800 text-white shadow-2xs"
+                        : "bg-white text-ink-600 hover:bg-stone-100 border border-stone-200"
+                    }`}
+                  >
+                    {status === "PendingReverification"
+                      ? "Pending Re-verification"
+                      : status === "ReverificationRejected"
+                      ? "Rejected"
+                      : status}
+                  </button>
+                ))}
+              </div>
+
+              <span className="text-xs text-ink-400 font-mono">
+                Showing {filteredStores.length} of {totalStoresCount} stores
+              </span>
+            </div>
+
+            {storesError && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                <span>{storesError}</span>
+              </div>
+            )}
+
+            {/* Stores List */}
+            {isStoresLoading ? (
+              <div className="py-16 text-center space-y-2">
+                <Loader2 className="w-6 h-6 animate-spin text-jade-700 mx-auto" />
+                <p className="text-xs text-ink-500">Loading store re-verification queue...</p>
+              </div>
+            ) : filteredStores.length === 0 ? (
+              <div className="py-14 text-center border border-dashed border-stone-300 rounded-2xl bg-stone-50/50 space-y-2">
+                <Store className="w-8 h-8 text-stone-400 mx-auto" />
+                <p className="text-xs font-semibold text-ink-700">No stores found</p>
+                <p className="text-[11px] text-ink-500">
+                  {selectedStoreStatus === "All"
+                    ? "There are currently no seller stores registered on the platform."
+                    : `No stores matching filter "${selectedStoreStatus}".`}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredStores.map((st) => {
+                  const isPending = st.verificationStatus === "PendingReverification";
+                  const isVerified = st.verificationStatus === "Verified";
+                  const isRejected = st.verificationStatus === "ReverificationRejected";
+
+                  return (
+                    <div
+                      key={st.sellerUserId}
+                      className={`p-4 rounded-2xl border transition-all space-y-3 bg-white shadow-2xs ${
+                        isPending
+                          ? "border-amber-300 ring-1 ring-amber-200/50"
+                          : isRejected
+                          ? "border-red-200"
+                          : "border-stone-200"
+                      }`}
+                    >
+                      {/* Store Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-100 pb-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                              isPending
+                                ? "bg-amber-100 text-amber-800"
+                                : isRejected
+                                ? "bg-red-100 text-red-800"
+                                : "bg-jade-100 text-jade-800"
+                            }`}
+                          >
+                            <Store className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-sm font-bold text-ink-900">{st.storeName}</h3>
+                              <span className="text-[11px] font-mono text-ink-400">
+                                slug: {st.slug}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-ink-500">
+                              Artisan Store Profile · Member since {new Date(st.createdAtUtc).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Status Badge */}
+                        <div className="flex items-center gap-2">
+                          {isPending && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                              <Clock className="w-3 h-3 animate-pulse" />
+                              <span>Pending Re-verification</span>
+                            </span>
+                          )}
+                          {isVerified && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>Verified Store</span>
+                            </span>
+                          )}
+                          {isRejected && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-800 border border-red-300">
+                              <XCircle className="w-3 h-3" />
+                              <span>Re-verification Rejected</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Store Details Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div className="space-y-0.5">
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-ink-500 block">
+                            Seller User ID
+                          </span>
+                          <span className="font-mono text-ink-700 text-[11px] break-all">
+                            {st.sellerUserId}
+                          </span>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-ink-500 block">
+                            Contact Phone
+                          </span>
+                          <span className="font-semibold text-ink-800 flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-ink-400" />
+                            <span>{st.contactPhone || "None provided"}</span>
+                          </span>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-ink-500 block">
+                            City / Township
+                          </span>
+                          <span className="font-semibold text-ink-800 flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-ink-400" />
+                            <span>{st.cityOrTownship || "Not specified"}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Bio preview if available */}
+                      {st.bio && (
+                        <div className="p-2.5 rounded-xl bg-stone-50 border border-stone-200/80 text-[11px] text-ink-600 space-y-0.5">
+                          <span className="font-semibold text-ink-700 text-[10px] uppercase tracking-wider block">
+                            Store Description / Bio:
+                          </span>
+                          <p className="line-clamp-2 italic text-ink-800">“{st.bio}”</p>
+                        </div>
+                      )}
+
+                      {/* Pending Notice & Action Buttons */}
+                      {isPending && (
+                        <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                          <div className="flex items-center gap-2 text-xs text-amber-900">
+                            <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
+                            <span>
+                              Store name or profile details were modified. Product publishing is blocked until approved.
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => openStoreDecisionModal(st, "Rejected")}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold transition-colors cursor-pointer"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              <span>Reject Update</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openStoreDecisionModal(st, "Approved")}
+                              className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-jade-800 hover:bg-jade-900 text-white text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Approve &amp; Verify</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {isRejected && (
+                        <div className="p-2.5 rounded-xl bg-red-50/80 border border-red-200 text-xs text-red-800 flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                          <span>
+                            Re-verification was rejected. Product publishing remains suspended until compliant store details are submitted.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================================= */}
         {/* MODAL 1: SELLER APPLICATION DECISION MODAL                                */}
         {/* ========================================================================= */}
         {activeApp && decisionAction && (
@@ -1637,6 +2039,155 @@ export default function AdminDashboardPage() {
                     <span>
                       {subDecisionAction === "Approved"
                         ? "Approve & Activate Quota"
+                        : "Confirm Rejection"}
+                    </span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* MODAL 4: STORE RE-VERIFICATION DECISION MODAL                             */}
+        {/* ========================================================================= */}
+        {activeStore && storeDecisionAction && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/50 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-stone-200 p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                <div className="flex items-center gap-2">
+                  {storeDecisionAction === "Approved" ? (
+                    <div className="w-8 h-8 rounded-xl bg-jade-50 text-jade-800 flex items-center justify-center border border-jade-200">
+                      <CheckCircle2 className="w-4 h-4 text-jade-700" />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-xl bg-red-50 text-red-800 flex items-center justify-center border border-red-200">
+                      <XCircle className="w-4 h-4 text-red-700" />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="text-sm font-bold text-ink-900">
+                      {storeDecisionAction === "Approved"
+                        ? "Approve Store Re-verification"
+                        : "Reject Store Re-verification"}
+                    </h3>
+                    <p className="text-[11px] text-ink-500">
+                      {activeStore.storeName} ({activeStore.slug})
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveStore(null);
+                    setStoreDecisionAction(null);
+                  }}
+                  className="text-stone-400 hover:text-ink-700 text-xs font-bold p-1 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {storeDecisionFeedback && (
+                <div
+                  className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                    storeDecisionFeedback.type === "success"
+                      ? "bg-jade-50 border border-jade-200 text-jade-800"
+                      : "bg-red-50 border border-red-200 text-red-800"
+                  }`}
+                >
+                  {storeDecisionFeedback.type === "success" ? (
+                    <CheckCircle2 className="w-4 h-4 text-jade-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  )}
+                  <span>{storeDecisionFeedback.message}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleStoreDecision} className="space-y-4">
+                <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 space-y-1.5 text-xs text-ink-700">
+                  <div className="flex justify-between">
+                    <span className="text-ink-500">Store Name:</span>
+                    <strong className="text-ink-900">{activeStore.storeName}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-ink-500">Slug:</span>
+                    <span className="font-mono text-ink-700">/sellers/{activeStore.slug}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-ink-500">Phone:</span>
+                    <span className="text-ink-800">{activeStore.contactPhone || "None"}</span>
+                  </div>
+                  {activeStore.cityOrTownship && (
+                    <div className="flex justify-between">
+                      <span className="text-ink-500">Location:</span>
+                      <span className="text-ink-800">{activeStore.cityOrTownship}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-xs text-ink-600 leading-relaxed">
+                  {storeDecisionAction === "Approved" ? (
+                    <p className="p-2.5 rounded-xl bg-jade-50/70 border border-jade-200/60 text-jade-950">
+                      Approving restores this store to <strong>Verified</strong> status and immediately unlocks product publishing and listing creation.
+                    </p>
+                  ) : (
+                    <p className="p-2.5 rounded-xl bg-red-50/70 border border-red-200/60 text-red-950">
+                      Rejecting marks the store as <strong>ReverificationRejected</strong> and maintains the block on product publishing until the seller updates with compliant information.
+                    </p>
+                  )}
+                </div>
+
+                {storeDecisionAction === "Rejected" && (
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-ink-700">
+                      Rejection Reason <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={storeDecisionReason}
+                      onChange={(e) => setStoreDecisionReason(e.target.value)}
+                      disabled={isDecidingStore}
+                      placeholder="e.g. Store name contains trademarked brand names or misleading claims."
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-red-600/30 focus:border-red-600"
+                    />
+                    <p className="text-[10px] text-ink-500">
+                      This explanation will assist the artisan in correcting their store profile details.
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveStore(null);
+                      setStoreDecisionAction(null);
+                    }}
+                    disabled={isDecidingStore}
+                    className="px-3.5 py-1.5 rounded-xl border border-stone-300 text-xs font-semibold text-ink-700 hover:bg-stone-50 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={
+                      isDecidingStore ||
+                      (storeDecisionAction === "Rejected" && !storeDecisionReason.trim())
+                    }
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer disabled:opacity-50 ${
+                      storeDecisionAction === "Approved"
+                        ? "bg-jade-800 hover:bg-jade-900"
+                        : "bg-red-700 hover:bg-red-800"
+                    }`}
+                  >
+                    {isDecidingStore && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>
+                      {storeDecisionAction === "Approved"
+                        ? "Approve & Restore Verified"
                         : "Confirm Rejection"}
                     </span>
                   </button>

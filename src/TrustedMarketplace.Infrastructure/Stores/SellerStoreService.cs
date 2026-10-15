@@ -4,6 +4,7 @@ using TrustedMarketplace.Application.Common.Exceptions;
 using TrustedMarketplace.Application.Stores;
 using TrustedMarketplace.Application.Stores.Dtos;
 using TrustedMarketplace.Domain.Auditing;
+using TrustedMarketplace.Domain.Common.Exceptions;
 using TrustedMarketplace.Domain.Stores;
 using TrustedMarketplace.Infrastructure.Persistence;
 
@@ -120,6 +121,106 @@ public class SellerStoreService : ISellerStoreService
 
         await _dbContext.SaveChangesAsync(ct);
 
+        return ToDto(store);
+    }
+
+    public async Task<IReadOnlyList<StoreProfileDto>> GetStoresForAdminAsync(
+        SellerVerificationStatus? status = null,
+        CancellationToken ct = default)
+    {
+        var query = _dbContext.SellerProfiles.AsNoTracking();
+
+        if (status.HasValue)
+        {
+            query = query.Where(s => s.VerificationStatus == status.Value);
+        }
+
+        var stores = await query
+            .OrderBy(s => s.VerificationStatus == SellerVerificationStatus.PendingReverification ? 0 : 1)
+            .ThenByDescending(s => s.UpdatedAtUtc)
+            .ToListAsync(ct);
+
+        return stores.Select(ToDto).ToList();
+    }
+
+    public async Task<StoreProfileDto> ProcessStoreReverificationDecisionAsync(
+        Guid id,
+        Guid adminUserId,
+        AdminStoreReverificationRequest request,
+        string correlationId,
+        CancellationToken ct = default)
+    {
+        if (request == null)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["Request"] = new[] { "Re-verification request payload is required." }
+            });
+        }
+
+        var store = await _dbContext.SellerProfiles
+            .FirstOrDefaultAsync(s => s.Id == id || s.SellerUserId == id, ct);
+
+        if (store == null)
+        {
+            throw new NotFoundException($"Store profile with ID or Seller User ID '{id}' was not found.");
+        }
+
+        if (store.VerificationStatus != SellerVerificationStatus.PendingReverification &&
+            store.VerificationStatus != SellerVerificationStatus.ReverificationRejected)
+        {
+            throw new DomainException($"Cannot process re-verification for store in '{store.VerificationStatus}' status. Store must be in 'PendingReverification' or 'ReverificationRejected'.");
+        }
+
+        var decision = request.Decision?.Trim();
+
+        if (string.Equals(decision, "Approved", StringComparison.OrdinalIgnoreCase))
+        {
+            store.ApproveReverification();
+
+            var audit = AuditEvent.Create(
+                action: "SellerStoreReverification_Approved",
+                targetType: "SellerProfile",
+                targetId: store.Id.ToString(),
+                correlationId: correlationId,
+                actorUserId: adminUserId,
+                reason: request.Reason ?? "Admin approved store re-verification.");
+
+            _dbContext.AuditEvents.Add(audit);
+            _logger.LogInformation("Admin {AdminId} approved store re-verification for store {StoreName} (Seller: {SellerId})", adminUserId, store.StoreName, store.SellerUserId);
+        }
+        else if (string.Equals(decision, "Rejected", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(request.Reason))
+            {
+                throw new ValidationException(new Dictionary<string, string[]>
+                {
+                    ["Reason"] = new[] { "A reason is required when rejecting store re-verification." }
+                });
+            }
+
+            store.RejectReverification(request.Reason);
+
+            var audit = AuditEvent.Create(
+                action: "SellerStoreReverification_Rejected",
+                targetType: "SellerProfile",
+                targetId: store.Id.ToString(),
+                correlationId: correlationId,
+                actorUserId: adminUserId,
+                reason: request.Reason);
+
+            _dbContext.AuditEvents.Add(audit);
+            _logger.LogWarning("Admin {AdminId} rejected store re-verification for store {StoreName} (Seller: {SellerId}). Reason: {Reason}", adminUserId, store.StoreName, store.SellerUserId, request.Reason);
+        }
+        else
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["Decision"] = new[] { "Decision must be either 'Approved' or 'Rejected'." }
+            });
+        }
+
+        await _dbContext.SaveChangesAsync(ct);
         return ToDto(store);
     }
 

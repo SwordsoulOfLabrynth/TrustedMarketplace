@@ -254,4 +254,36 @@ public class CatalogAndSubscriptionEndpointsTests : IClassFixture<WebApplication
         Assert.Equal("Standard", quota.PlanName);
         Assert.Equal(30, quota.MaxActiveListings);
     }
+
+    [Fact]
+    public async Task AdminCatalogSearchStatus_AccessControl_AndSuccess()
+    {
+        // 1. Anonymous -> 401
+        var anonResp = await _client.GetAsync("/api/v1/admin/catalog/search-status");
+        Assert.Equal(HttpStatusCode.Unauthorized, anonResp.StatusCode);
+
+        // 2. Buyer -> 403
+        var (buyerToken, _) = await RegisterAndLoginUserAsync(RoleConstants.Buyer);
+        using var buyerReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/catalog/search-status");
+        buyerReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", buyerToken);
+        var buyerResp = await _client.SendAsync(buyerReq);
+        Assert.Equal(HttpStatusCode.Forbidden, buyerResp.StatusCode);
+
+        // 3. Admin -> 200 OK
+        var (adminToken, _) = await RegisterAndLoginUserAsync(RoleConstants.Admin);
+        using var adminReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/catalog/search-status");
+        adminReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        var adminResp = await _client.SendAsync(adminReq);
+        Assert.Equal(HttpStatusCode.OK, adminResp.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminCanTriggerReindexProductEmbeddings_Successfully()
+    {
+        var (adminToken, _) = await RegisterAndLoginUserAsync(RoleConstants.Admin);
+        using var reindexReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/catalog/reindex-embeddings?force=false");
+        reindexReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        var reindexResp = await _client.SendAsync(reindexReq);
+        Assert.Equal(HttpStatusCode.OK, reindexResp.StatusCode);
+    }
 }

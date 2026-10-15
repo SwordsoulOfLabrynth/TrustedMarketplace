@@ -18,3 +18,8 @@ public record UpdateStoreProfileRequest(
     string ContactPhone,
     string? CityOrTownship
 );
+
+public record AdminStoreReverificationRequest(
+    string Decision, // "Approved" or "Rejected"
+    string? Reason = null
+);

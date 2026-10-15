@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using TrustedMarketplace.Application.Search;
 using TrustedMarketplace.Infrastructure.Search;
 using Xunit;
 
@@ -6,18 +8,22 @@ namespace TrustedMarketplace.UnitTests.Search;
 
 public class SemanticSearchTests
 {
+    private readonly LocalConceptHashEmbeddingProvider _localProvider;
     private readonly MultilingualSemanticSearchService _service;
 
     public SemanticSearchTests()
     {
-        _service = new MultilingualSemanticSearchService(NullLogger<MultilingualSemanticSearchService>.Instance);
+        _localProvider = new LocalConceptHashEmbeddingProvider(NullLogger<LocalConceptHashEmbeddingProvider>.Instance);
+        _service = new MultilingualSemanticSearchService(
+            _localProvider,
+            NullLogger<MultilingualSemanticSearchService>.Instance);
     }
 
     [Fact]
     public async Task GenerateEmbedding_ReturnsNormalized384DimensionalVector()
     {
         var text = "Handmade Bagan Lacquerware Box";
-        var embedding = await _service.GenerateEmbeddingAsync(text);
+        var embedding = await _service.GenerateEmbeddingAsync(text, EmbeddingInputType.Passage);
 
         Assert.NotNull(embedding);
         Assert.Equal(384, embedding.Length);
@@ -44,13 +50,13 @@ public class SemanticSearchTests
     public async Task CrossLingualSemanticMatch_BurmesePuppetQuery_MatchesEnglishMarionetteProduct()
     {
         // Burmese query for marionette puppet: "ရုပ်သေး" or "ရိုးရာလက်လုပ်ရုပ်သေး"
-        var queryVec = await _service.GenerateEmbeddingAsync("ရိုးရာလက်လုပ် ရုပ်သေး");
+        var queryVec = await _service.GenerateEmbeddingAsync("ရိုးရာလက်လုပ် ရုပ်သေး", EmbeddingInputType.Query);
 
         // Target product (English title & description)
-        var puppetProductVec = await _service.GenerateEmbeddingAsync("Traditional Teakwood Marionette Puppet Handmade Bagan Puppetry");
+        var puppetProductVec = await _service.GenerateEmbeddingAsync("Traditional Teakwood Marionette Puppet Handmade Bagan Puppetry", EmbeddingInputType.Passage);
 
         // Unrelated product
-        var unrelatedProductVec = await _service.GenerateEmbeddingAsync("Organic Green Tea Leaf from Shan Highlands");
+        var unrelatedProductVec = await _service.GenerateEmbeddingAsync("Organic Green Tea Leaf from Shan Highlands", EmbeddingInputType.Passage);
 
         var puppetSimilarity = _service.CalculateCosineSimilarity(queryVec, puppetProductVec);
         var unrelatedSimilarity = _service.CalculateCosineSimilarity(queryVec, unrelatedProductVec);
@@ -64,13 +70,13 @@ public class SemanticSearchTests
     public async Task CrossLingualSemanticMatch_BurmeseLacquerwareQuery_MatchesEnglishLacquerwareProduct()
     {
         // Burmese query for lacquerware: "ပုဂံ ယွန်းထည် ပန်းကန်"
-        var queryVec = await _service.GenerateEmbeddingAsync("ပုဂံ ယွန်းထည် ပန်းကန်");
+        var queryVec = await _service.GenerateEmbeddingAsync("ပုဂံ ယွန်းထည် ပန်းကန်", EmbeddingInputType.Query);
 
         // Lacquerware product
-        var lacquerwareVec = await _service.GenerateEmbeddingAsync("Authentic Bagan Lacquerware Serving Bowl Tableware");
+        var lacquerwareVec = await _service.GenerateEmbeddingAsync("Authentic Bagan Lacquerware Serving Bowl Tableware", EmbeddingInputType.Passage);
 
         // Unrelated product
-        var puppetVec = await _service.GenerateEmbeddingAsync("Handmade Teak Marionette Puppet");
+        var puppetVec = await _service.GenerateEmbeddingAsync("Handmade Teak Marionette Puppet", EmbeddingInputType.Passage);
 
         var lacquerSimilarity = _service.CalculateCosineSimilarity(queryVec, lacquerwareVec);
         var puppetSimilarity = _service.CalculateCosineSimilarity(queryVec, puppetVec);
@@ -84,13 +90,13 @@ public class SemanticSearchTests
     public async Task CrossLingualSemanticMatch_EnglishQuery_MatchesBurmeseCraftDescription()
     {
         // English query: "traditional handmade silk scarf"
-        var queryVec = await _service.GenerateEmbeddingAsync("traditional handmade silk scarf");
+        var queryVec = await _service.GenerateEmbeddingAsync("traditional handmade silk scarf", EmbeddingInputType.Query);
 
         // Burmese product: "ရိုးရာ လက်လုပ် ပိုးထည် ပုဆိုး"
-        var burmeseSilkVec = await _service.GenerateEmbeddingAsync("ရိုးရာ လက်လုပ် ပိုးထည် ပုဆိုး");
+        var burmeseSilkVec = await _service.GenerateEmbeddingAsync("ရိုးရာ လက်လုပ် ပိုးထည် ပုဆိုး", EmbeddingInputType.Passage);
 
         // Unrelated product: "ကျွန်းသစ် ပန်းပု ရုပ်တု" (teak wood carving)
-        var burmeseWoodVec = await _service.GenerateEmbeddingAsync("ကျွန်းသစ် ပန်းပု ရုပ်တု");
+        var burmeseWoodVec = await _service.GenerateEmbeddingAsync("ကျွန်းသစ် ပန်းပု ရုပ်တု", EmbeddingInputType.Passage);
 
         var silkSim = _service.CalculateCosineSimilarity(queryVec, burmeseSilkVec);
         var woodSim = _service.CalculateCosineSimilarity(queryVec, burmeseWoodVec);
@@ -124,5 +130,43 @@ public class SemanticSearchTests
         Assert.NotEmpty(hash1);
         Assert.Equal(hash1, hash2);
         Assert.NotEqual(hash1, hashDifferent);
+    }
+
+    [Fact]
+    public void CalculateCosineSimilarity_DifferentDimensions_ReturnsZeroGracefully()
+    {
+        var vec384 = new float[384];
+        vec384[0] = 1.0f;
+        var vec1024 = new float[1024];
+        vec1024[0] = 1.0f;
+
+        var sim = _service.CalculateCosineSimilarity(vec384, vec1024);
+        Assert.Equal(0f, sim);
+    }
+
+    [Fact]
+    public async Task ResilientFailover_WhenExternalProviderThrows_FallsBackToLocalProvider()
+    {
+        var failingProvider = new MockFailingEmbeddingProvider();
+        var compositeService = new MultilingualSemanticSearchService(
+            _localProvider,
+            NullLogger<MultilingualSemanticSearchService>.Instance,
+            failingProvider);
+
+        var embedding = await compositeService.GenerateEmbeddingAsync("Bagan Lacquerware");
+        Assert.NotNull(embedding);
+        Assert.Equal(384, embedding.Length);
+        Assert.True(embedding[0] > 0 || embedding[9] > 0); // Lacquerware concept activated
+    }
+
+    private sealed class MockFailingEmbeddingProvider : IEmbeddingProvider
+    {
+        public string ProviderName => "MockFailing";
+        public int Dimension => 1024;
+
+        public Task<float[]?> GenerateEmbeddingAsync(string text, EmbeddingInputType inputType, CancellationToken ct = default)
+        {
+            throw new HttpRequestException("Simulated upstream provider outage");
+        }
     }
 }

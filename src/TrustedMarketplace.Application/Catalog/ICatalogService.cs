@@ -13,6 +13,7 @@ public interface ICatalogService
     Task<ProductDto> ArchiveProductAsync(Guid sellerUserId, Guid productId, CancellationToken ct = default);
     Task<IReadOnlyList<ProductDto>> GetSellerProductsAsync(Guid sellerUserId, CancellationToken ct = default);
     Task EnsureProductEmbeddingsAsync(CancellationToken ct = default);
+    Task<int> ReindexProductEmbeddingsAsync(bool force = false, CancellationToken ct = default);
 
     Task<ProductImageDto> UploadProductImageAsync(
         Guid sellerUserId,

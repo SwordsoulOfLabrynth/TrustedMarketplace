@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TrustedMarketplace.Application.Catalog;
@@ -97,7 +98,7 @@ public class CatalogService : ICatalogService
         var kw = query.Keyword.Trim();
         try
         {
-            var queryVector = await _semanticSearchService.GenerateEmbeddingAsync(kw, ct);
+            var queryVector = await _semanticSearchService.GenerateEmbeddingAsync(kw, EmbeddingInputType.Query, ct);
             var candidates = await dbQuery.ToListAsync(ct);
 
             var kwLower = kw.ToLowerInvariant();
@@ -135,8 +136,16 @@ public class CatalogService : ICatalogService
                 }
                 else if (kwWords.Length > 0)
                 {
-                    var titleWordMatches = kwWords.Count(w => titleLower.Contains(w));
-                    var descWordMatches = kwWords.Count(w => descLower.Contains(w));
+                    var titleWordMatches = kwWords.Count(w =>
+                        char.IsAsciiLetterOrDigit(w[0])
+                            ? Regex.IsMatch(titleLower, $@"\b{Regex.Escape(w)}\b")
+                            : titleLower.Contains(w));
+
+                    var descWordMatches = kwWords.Count(w =>
+                        char.IsAsciiLetterOrDigit(w[0])
+                            ? Regex.IsMatch(descLower, $@"\b{Regex.Escape(w)}\b")
+                            : descLower.Contains(w));
+
                     if (titleWordMatches > 0)
                     {
                         lexicalScore += 0.5f * ((float)titleWordMatches / kwWords.Length);
@@ -148,7 +157,10 @@ public class CatalogService : ICatalogService
                 }
 
                 float categoryScore = 0f;
-                if (catLower.Contains(kwLower) || (kwWords.Length > 0 && kwWords.Any(w => catLower.Contains(w))))
+                if (catLower.Contains(kwLower) || (kwWords.Length > 0 && kwWords.Any(w =>
+                    char.IsAsciiLetterOrDigit(w[0])
+                        ? Regex.IsMatch(catLower, $@"\b{Regex.Escape(w)}\b")
+                        : catLower.Contains(w))))
                 {
                     categoryScore = 0.5f;
                 }
@@ -156,8 +168,8 @@ public class CatalogService : ICatalogService
                 // Weighted hybrid formula: 50% semantic, 35% lexical, 15% category
                 var hybridScore = (0.50f * semanticSimilarity) + (0.35f * lexicalScore) + (0.15f * categoryScore);
 
-                // Include item if it matches semantically (similarity above noise threshold) or lexically
-                if (hybridScore >= 0.12f || lexicalScore > 0f)
+                // Include item if it matches lexically, or semantically above noise threshold (0.20f)
+                if (lexicalScore > 0f || semanticSimilarity >= 0.20f)
                 {
                     scoredResults.Add((product, hybridScore, lexicalScore));
                 }
@@ -271,7 +283,7 @@ public class CatalogService : ICatalogService
         try
         {
             var contentToIndex = $"{product.Title} {product.Description} {category.Name}";
-            var vector = await _semanticSearchService.GenerateEmbeddingAsync(contentToIndex, ct);
+            var vector = await _semanticSearchService.GenerateEmbeddingAsync(contentToIndex, EmbeddingInputType.Passage, ct);
             var contentHash = _semanticSearchService.ComputeContentHash(contentToIndex);
             var embedding = new ProductEmbedding(product.Id, vector, contentHash);
             _dbContext.ProductEmbeddings.Add(embedding);
@@ -350,14 +362,14 @@ public class CatalogService : ICatalogService
 
             if (existingEmbedding == null)
             {
-                var vector = await _semanticSearchService.GenerateEmbeddingAsync(contentToIndex, ct);
+                var vector = await _semanticSearchService.GenerateEmbeddingAsync(contentToIndex, EmbeddingInputType.Passage, ct);
                 var newEmbedding = new ProductEmbedding(product.Id, vector, newContentHash);
                 _dbContext.ProductEmbeddings.Add(newEmbedding);
                 await _dbContext.SaveChangesAsync(ct);
             }
             else if (existingEmbedding.ContentHash != newContentHash)
             {
-                var vector = await _semanticSearchService.GenerateEmbeddingAsync(contentToIndex, ct);
+                var vector = await _semanticSearchService.GenerateEmbeddingAsync(contentToIndex, EmbeddingInputType.Passage, ct);
                 existingEmbedding.Update(vector, newContentHash);
                 await _dbContext.SaveChangesAsync(ct);
             }
@@ -737,7 +749,7 @@ public class CatalogService : ICatalogService
                     if (exists) continue;
 
                     var content = $"{product.Title} {product.Description} {product.Category?.Name}";
-                    var vector = await _semanticSearchService.GenerateEmbeddingAsync(content, ct);
+                    var vector = await _semanticSearchService.GenerateEmbeddingAsync(content, EmbeddingInputType.Passage, ct);
                     var hash = _semanticSearchService.ComputeContentHash(content);
                     var embedding = new ProductEmbedding(product.Id, vector, hash);
                     _dbContext.ProductEmbeddings.Add(embedding);
@@ -759,6 +771,64 @@ public class CatalogService : ICatalogService
         {
             _logger.LogWarning(ex, "Non-fatal error in EnsureProductEmbeddingsAsync");
         }
+    }
+
+    public async Task<int> ReindexProductEmbeddingsAsync(bool force = false, CancellationToken ct = default)
+    {
+        var indexedCount = 0;
+        try
+        {
+            var query = _dbContext.Products
+                .Include(p => p.Category)
+                .Include(p => p.Embedding)
+                .AsQueryable();
+
+            if (!force)
+            {
+                query = query.Where(p => p.Embedding == null);
+            }
+
+            var products = await query.ToListAsync(ct);
+            if (products.Count == 0) return 0;
+
+            _logger.LogInformation("Reindexing {Count} products (force={Force}) using provider {Provider}...", products.Count, force, _semanticSearchService.ActiveProviderName);
+
+            foreach (var product in products)
+            {
+                var content = $"{product.Title} {product.Description} {product.Category?.Name}";
+                var hash = _semanticSearchService.ComputeContentHash(content);
+
+                // If not forcing and hash unchanged, skip
+                if (!force && product.Embedding != null && product.Embedding.ContentHash == hash)
+                {
+                    continue;
+                }
+
+                var vector = await _semanticSearchService.GenerateEmbeddingAsync(content, EmbeddingInputType.Passage, ct);
+
+                if (product.Embedding == null)
+                {
+                    var embedding = new ProductEmbedding(product.Id, vector, hash);
+                    _dbContext.ProductEmbeddings.Add(embedding);
+                }
+                else
+                {
+                    product.Embedding.Update(vector, hash);
+                }
+
+                indexedCount++;
+            }
+
+            await _dbContext.SaveChangesAsync(ct);
+            _logger.LogInformation("Successfully reindexed {Count} products.", indexedCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to complete ReindexProductEmbeddingsAsync");
+            throw;
+        }
+
+        return indexedCount;
     }
 
     private static ProductDto ToDto(Product p) =>

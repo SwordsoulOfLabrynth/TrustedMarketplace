@@ -204,6 +204,8 @@ export default function SellerStoreProfilePage() {
 
   const isPendingReverification =
     store?.verificationStatus === "PendingReverification";
+  const isReverificationRejected =
+    store?.verificationStatus === "ReverificationRejected";
 
   return (
     <MobileViewportContainer
@@ -255,7 +257,9 @@ export default function SellerStoreProfilePage() {
         {store && (
           <div
             className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-              isPendingReverification
+              isReverificationRejected
+                ? "bg-rose-50/90 border-rose-300 text-rose-950"
+                : isPendingReverification
                 ? "bg-amber-50/90 border-amber-300 text-amber-950"
                 : "bg-jade-50/70 border-jade-200 text-jade-950"
             }`}
@@ -263,12 +267,14 @@ export default function SellerStoreProfilePage() {
             <div className="flex items-start gap-3">
               <div
                 className={`p-2 rounded-xl mt-0.5 ${
-                  isPendingReverification
+                  isReverificationRejected
+                    ? "bg-rose-100 text-rose-800"
+                    : isPendingReverification
                     ? "bg-amber-100 text-amber-800"
                     : "bg-jade-100 text-jade-800"
                 }`}
               >
-                {isPendingReverification ? (
+                {isReverificationRejected || isPendingReverification ? (
                   <ShieldAlert className="w-5 h-5" />
                 ) : (
                   <ShieldCheck className="w-5 h-5" />
@@ -277,7 +283,9 @@ export default function SellerStoreProfilePage() {
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold uppercase tracking-wider">
-                    {isPendingReverification
+                    {isReverificationRejected
+                      ? "Re-verification Rejected"
+                      : isPendingReverification
                       ? "Pending Re-verification"
                       : "Verified Artisan Store"}
                   </span>
@@ -286,7 +294,9 @@ export default function SellerStoreProfilePage() {
                   </span>
                 </div>
                 <p className="text-xs leading-relaxed myanmar-text">
-                  {isPendingReverification
+                  {isReverificationRejected
+                    ? "ဆိုင်အမည် ပြောင်းလဲမှုအား စီမံခန့်ခွဲသူမှ ငြင်းပယ်ထားပါသည်။ မူဝါဒနှင့် ကိုက်ညီသော ဆိုင်အမည်သို့ ပြန်လည်ပြင်ဆင်တင်ပြနိုင်ပါသည်။ ပစ္စည်းသစ်တင်ခွင့်ကို ခေတ္တရပ်ဆိုင်းထားပါသည်။"
+                    : isPendingReverification
                     ? "ဆိုင်အမည် ပြောင်းလဲထားသဖြင့် စီမံခန့်ခွဲသူမှ ပြန်လည်စစ်ဆေးနေပါသည်။ လက်ရှိတင်ထားပြီး ပစ္စည်းများအား ဆက်လက်ရောင်းချနိုင်သော်လည်း ပစ္စည်းသစ်တင်ခွင့်ကို ခေတ္တရပ်ဆိုင်းထားပါသည်။"
                     : "သင်၏ ဆိုင်အချက်အလက်များကို နိုင်ငံသားမှတ်ပုံတင်နှင့် စီးပွားရေးအထောက်အထားများဖြင့် အတည်ပြုပြီးဖြစ်ပါသည်။"}
                 </p>
