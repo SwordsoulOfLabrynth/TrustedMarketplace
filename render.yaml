@@ -1,0 +1,35 @@
+# Render Blueprint — TrustedMarketplace
+# Docs: https://render.com/docs/blueprint-spec
+# Usage: Connect your GitHub repo on render.com and it auto-reads this file.
+
+services:
+  - type: web
+    name: trusted-marketplace-api
+    runtime: docker
+    dockerfilePath: src/TrustedMarketplace.Api/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_HTTP_PORTS
+        value: "8080"
+      - key: Jwt__Issuer
+        value: TrustedMarketplace
+      - key: Jwt__Audience
+        value: TrustedMarketplaceClient
+      - key: Jwt__AccessTokenExpirationMinutes
+        value: "15"
+      - key: Jwt__RefreshTokenExpirationDays
+        value: "7"
+      - key: Storage__Provider
+        value: Local
+      - key: Storage__LocalPrivateRoot
+        value: /app/storage/private_evidence
+      - key: Storage__LocalPublicRoot
+        value: /app/storage/public_media
+      # ⚠️ Set these manually in Render dashboard (secret values):
+      # ConnectionStrings__DefaultConnection  →  your Neon PostgreSQL URL
+      # Jwt__Key                              →  random 32+ char secret
+      # NVIDIA_API_KEY                        →  optional, leave blank to skip
