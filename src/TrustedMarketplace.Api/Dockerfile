@@ -1,5 +1,6 @@
 # Multi-stage Dockerfile for TrustedMarketplace ASP.NET Core API (.NET 10)
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# Pinned to exact GA release to match local SDK 10.0.401
+FROM mcr.microsoft.com/dotnet/sdk:10.0.401-noble AS build
 WORKDIR /src
 
 # Copy csproj files for layer caching
@@ -15,8 +16,8 @@ COPY src/ src/
 WORKDIR "/src/src/TrustedMarketplace.Api"
 RUN dotnet publish "TrustedMarketplace.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# Production runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+# Production runtime image — pinned to match SDK 10.0.401
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.10-noble AS runtime
 WORKDIR /app
 
 # Install curl for container health check
