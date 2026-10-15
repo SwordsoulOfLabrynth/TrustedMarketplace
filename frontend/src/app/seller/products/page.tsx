@@ -16,6 +16,8 @@ import {
   Archive,
   ArrowRight,
   RefreshCw,
+  Store,
+  CreditCard,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { sellerProductsApi } from "@/lib/seller-products-api";
@@ -143,6 +145,22 @@ export default function SellerProductsPage() {
             >
               <RefreshCw className="w-4 h-4" />
             </button>
+
+            <Link
+              href="/seller/store"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white border border-stone-200 text-ink-700 hover:text-jade-800 hover:bg-stone-50 font-semibold text-xs transition-colors shadow-2xs"
+            >
+              <Store className="w-4 h-4 text-jade-700" />
+              <span>Store Profile</span>
+            </Link>
+
+            <Link
+              href="/seller/subscription"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white border border-stone-200 text-ink-700 hover:text-jade-800 hover:bg-stone-50 font-semibold text-xs transition-colors shadow-2xs"
+            >
+              <CreditCard className="w-4 h-4 text-jade-700" />
+              <span>Plans &amp; Quota</span>
+            </Link>
 
             <Link
               href="/seller/products/new"

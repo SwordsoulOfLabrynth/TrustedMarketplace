@@ -6,6 +6,7 @@ using TrustedMarketplace.Application.Common.Exceptions;
 using TrustedMarketplace.Application.Common.Interfaces;
 using TrustedMarketplace.Application.Common.Security;
 using TrustedMarketplace.Application.Subscriptions;
+using TrustedMarketplace.Application.Search;
 using TrustedMarketplace.Domain.Catalog;
 using TrustedMarketplace.Domain.Common.Exceptions;
 using TrustedMarketplace.Domain.Stores;
@@ -18,17 +19,20 @@ public class CatalogService : ICatalogService
     private readonly AppDbContext _dbContext;
     private readonly ISubscriptionService _subscriptionService;
     private readonly IFileStorageService _fileStorageService;
+    private readonly ISemanticSearchService _semanticSearchService;
     private readonly ILogger<CatalogService> _logger;
 
     public CatalogService(
         AppDbContext dbContext,
         ISubscriptionService subscriptionService,
         IFileStorageService fileStorageService,
+        ISemanticSearchService semanticSearchService,
         ILogger<CatalogService> logger)
     {
         _dbContext = dbContext;
         _subscriptionService = subscriptionService;
         _fileStorageService = fileStorageService;
+        _semanticSearchService = semanticSearchService;
         _logger = logger;
     }
 
@@ -52,6 +56,7 @@ public class CatalogService : ICatalogService
             .Include(p => p.SellerProfile)
             .Include(p => p.Category)
             .Include(p => p.Images)
+            .Include(p => p.Embedding)
             .AsNoTracking()
             .Where(p => p.Status == ProductStatus.Published);
 
@@ -70,25 +75,131 @@ public class CatalogService : ICatalogService
             dbQuery = dbQuery.Where(p => p.PriceAmount <= query.MaxPrice.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(query.Keyword))
+        // If no keyword is provided, return standard paginated catalog sorted by CreatedAtUtc
+        if (string.IsNullOrWhiteSpace(query.Keyword))
         {
-            var kw = query.Keyword.Trim().ToLower();
-            dbQuery = dbQuery.Where(p => p.Title.ToLower().Contains(kw) || p.Description.ToLower().Contains(kw));
+            var totalCount = await dbQuery.CountAsync(ct);
+
+            var items = await dbQuery
+                .OrderByDescending(p => p.CreatedAtUtc)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return new PagedResult<ProductDto>(
+                items.Select(ToDto).ToList(),
+                page,
+                pageSize,
+                totalCount);
         }
 
-        var totalCount = await dbQuery.CountAsync(ct);
+        // Keyword provided: Hybrid Burmese & English semantic search
+        var kw = query.Keyword.Trim();
+        try
+        {
+            var queryVector = await _semanticSearchService.GenerateEmbeddingAsync(kw, ct);
+            var candidates = await dbQuery.ToListAsync(ct);
 
-        var items = await dbQuery
-            .OrderByDescending(p => p.CreatedAtUtc)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(ct);
+            var kwLower = kw.ToLowerInvariant();
+            var kwWords = kwLower.Split(new[] { ' ', '-', '_', ',', '.', '၊', '။' }, StringSplitOptions.RemoveEmptyEntries);
 
-        return new PagedResult<ProductDto>(
-            items.Select(ToDto).ToList(),
-            page,
-            pageSize,
-            totalCount);
+            var scoredResults = new List<(Product Product, float HybridScore, float LexicalScore)>(candidates.Count);
+
+            foreach (var product in candidates)
+            {
+                var prodVector = product.Embedding?.Vector;
+                float semanticSimilarity = 0f;
+
+                if (prodVector != null && prodVector.Length > 0 && queryVector.Length > 0)
+                {
+                    semanticSimilarity = Math.Max(0f, _semanticSearchService.CalculateCosineSimilarity(queryVector, prodVector));
+                }
+
+                // Lexical keyword match scoring
+                var titleLower = product.Title.ToLowerInvariant();
+                var descLower = product.Description.ToLowerInvariant();
+                var catLower = (product.Category?.Name ?? "").ToLowerInvariant();
+
+                float lexicalScore = 0f;
+                if (titleLower == kwLower)
+                {
+                    lexicalScore += 1.0f;
+                }
+                else if (titleLower.Contains(kwLower))
+                {
+                    lexicalScore += 0.7f;
+                }
+                else if (descLower.Contains(kwLower))
+                {
+                    lexicalScore += 0.4f;
+                }
+                else if (kwWords.Length > 0)
+                {
+                    var titleWordMatches = kwWords.Count(w => titleLower.Contains(w));
+                    var descWordMatches = kwWords.Count(w => descLower.Contains(w));
+                    if (titleWordMatches > 0)
+                    {
+                        lexicalScore += 0.5f * ((float)titleWordMatches / kwWords.Length);
+                    }
+                    if (descWordMatches > 0)
+                    {
+                        lexicalScore += 0.25f * ((float)descWordMatches / kwWords.Length);
+                    }
+                }
+
+                float categoryScore = 0f;
+                if (catLower.Contains(kwLower) || (kwWords.Length > 0 && kwWords.Any(w => catLower.Contains(w))))
+                {
+                    categoryScore = 0.5f;
+                }
+
+                // Weighted hybrid formula: 50% semantic, 35% lexical, 15% category
+                var hybridScore = (0.50f * semanticSimilarity) + (0.35f * lexicalScore) + (0.15f * categoryScore);
+
+                // Include item if it matches semantically (similarity above noise threshold) or lexically
+                if (hybridScore >= 0.12f || lexicalScore > 0f)
+                {
+                    scoredResults.Add((product, hybridScore, lexicalScore));
+                }
+            }
+
+            var totalMatched = scoredResults.Count;
+
+            var pagedItems = scoredResults
+                .OrderByDescending(x => x.LexicalScore >= 1.0f ? 200f : (x.LexicalScore >= 0.7f ? 100f : x.HybridScore))
+                .ThenByDescending(x => x.Product.CreatedAtUtc)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(x => x.Product)
+                .ToList();
+
+            return new PagedResult<ProductDto>(
+                pagedItems.Select(ToDto).ToList(),
+                page,
+                pageSize,
+                totalMatched);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Semantic search error for query '{Keyword}'. Gracefully falling back to lexical search.", kw);
+
+            // Graceful fallback to pure database ILIKE / Contains
+            var kwLower = kw.ToLower();
+            var fallbackQuery = dbQuery.Where(p => p.Title.ToLower().Contains(kwLower) || p.Description.ToLower().Contains(kwLower));
+            var totalCount = await fallbackQuery.CountAsync(ct);
+
+            var items = await fallbackQuery
+                .OrderByDescending(p => p.CreatedAtUtc)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return new PagedResult<ProductDto>(
+                items.Select(ToDto).ToList(),
+                page,
+                pageSize,
+                totalCount);
+        }
     }
 
     public async Task<ProductDto?> GetProductByIdAsync(Guid productId, Guid? callerUserId = null, CancellationToken ct = default)
@@ -156,6 +267,21 @@ public class CatalogService : ICatalogService
         _dbContext.Products.Add(product);
         await _dbContext.SaveChangesAsync(ct);
 
+        // Generate and persist initial semantic embedding
+        try
+        {
+            var contentToIndex = $"{product.Title} {product.Description} {category.Name}";
+            var vector = await _semanticSearchService.GenerateEmbeddingAsync(contentToIndex, ct);
+            var contentHash = _semanticSearchService.ComputeContentHash(contentToIndex);
+            var embedding = new ProductEmbedding(product.Id, vector, contentHash);
+            _dbContext.ProductEmbeddings.Add(embedding);
+            await _dbContext.SaveChangesAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to generate initial embedding for new product {ProductId}", product.Id);
+        }
+
         _logger.LogInformation("Created draft product {ProductId} by seller {SellerId}", product.Id, sellerUserId);
 
         return new ProductDto(
@@ -212,6 +338,34 @@ public class CatalogService : ICatalogService
 
         product.Update(request.Title, request.Description, request.PriceAmount, condition, category.Id);
         await _dbContext.SaveChangesAsync(ct);
+
+        // Update embedding if title, description or category changed
+        try
+        {
+            var contentToIndex = $"{request.Title} {request.Description} {category.Name}";
+            var newContentHash = _semanticSearchService.ComputeContentHash(contentToIndex);
+
+            var existingEmbedding = await _dbContext.ProductEmbeddings
+                .FirstOrDefaultAsync(e => e.ProductId == product.Id, ct);
+
+            if (existingEmbedding == null)
+            {
+                var vector = await _semanticSearchService.GenerateEmbeddingAsync(contentToIndex, ct);
+                var newEmbedding = new ProductEmbedding(product.Id, vector, newContentHash);
+                _dbContext.ProductEmbeddings.Add(newEmbedding);
+                await _dbContext.SaveChangesAsync(ct);
+            }
+            else if (existingEmbedding.ContentHash != newContentHash)
+            {
+                var vector = await _semanticSearchService.GenerateEmbeddingAsync(contentToIndex, ct);
+                existingEmbedding.Update(vector, newContentHash);
+                await _dbContext.SaveChangesAsync(ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to update semantic embedding for product {ProductId}", product.Id);
+        }
 
         return ToDto(product);
     }
@@ -551,6 +705,60 @@ public class CatalogService : ICatalogService
 
         var isPublished = product.Status == ProductStatus.Published;
         return (stream, image.MimeType, fileName, isPublished);
+    }
+
+    public async Task EnsureProductEmbeddingsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var existingEmbeddingIds = await _dbContext.ProductEmbeddings
+                .AsNoTracking()
+                .Select(e => e.ProductId)
+                .ToHashSetAsync(ct);
+
+            var productsWithoutEmbeddings = await _dbContext.Products
+                .Include(p => p.Category)
+                .AsNoTracking()
+                .Where(p => !existingEmbeddingIds.Contains(p.Id))
+                .ToListAsync(ct);
+
+            if (productsWithoutEmbeddings.Count == 0) return;
+
+            _logger.LogInformation("Indexing {Count} products without semantic embeddings...", productsWithoutEmbeddings.Count);
+
+            foreach (var product in productsWithoutEmbeddings)
+            {
+                try
+                {
+                    // Check once more in case inserted by concurrent worker
+                    var exists = await _dbContext.ProductEmbeddings
+                        .AsNoTracking()
+                        .AnyAsync(e => e.ProductId == product.Id, ct);
+                    if (exists) continue;
+
+                    var content = $"{product.Title} {product.Description} {product.Category?.Name}";
+                    var vector = await _semanticSearchService.GenerateEmbeddingAsync(content, ct);
+                    var hash = _semanticSearchService.ComputeContentHash(content);
+                    var embedding = new ProductEmbedding(product.Id, vector, hash);
+                    _dbContext.ProductEmbeddings.Add(embedding);
+                    await _dbContext.SaveChangesAsync(ct);
+                }
+                catch (DbUpdateException)
+                {
+                    _dbContext.ChangeTracker.Clear();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to index product {ProductId}", product.Id);
+                }
+            }
+
+            _logger.LogInformation("Completed indexing products without embeddings.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Non-fatal error in EnsureProductEmbeddingsAsync");
+        }
     }
 
     private static ProductDto ToDto(Product p) =>

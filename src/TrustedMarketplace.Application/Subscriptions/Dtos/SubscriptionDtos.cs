@@ -17,12 +17,41 @@ public record SellerSubscriptionDto(
     int MaxActiveListings,
     string Status,
     DateTime StartsAtUtc,
-    DateTime ExpiresAtUtc
+    DateTime ExpiresAtUtc,
+    string? PaymentMethod = null,
+    string? TransactionReference = null,
+    decimal? PaymentAmount = null,
+    string? PaymentCurrency = null,
+    DateTime? PaymentSubmittedAtUtc = null,
+    string? RejectionReason = null,
+    string? StoreName = null,
+    int? DurationMonths = null
 );
 
 public record AssignSubscriptionRequest(
     Guid SubscriptionPlanId,
     int DurationMonths = 1
+);
+
+public record SubmitSubscriptionPaymentRequest(
+    Guid SubscriptionPlanId,
+    string PaymentMethod,
+    string TransactionReference,
+    int DurationMonths = 1
+);
+
+public record VerifySubscriptionPaymentRequest(
+    string Decision,
+    string? Reason = null,
+    int DurationMonths = 1
+);
+
+public record PlatformPaymentMethodDto(
+    string Provider,
+    string AccountName,
+    string AccountPhone,
+    string Instructions,
+    string? QrCodeUrl = null
 );
 
 public record SellerQuotaDto(

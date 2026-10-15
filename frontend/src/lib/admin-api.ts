@@ -1,5 +1,14 @@
 import { apiClient } from "@/lib/api-client";
-import { AdminDecisionRequest, SellerApplicationDto } from "@/types/api";
+import {
+  AdminComplaintDecisionRequest,
+  AdminDecisionRequest,
+  ComplaintDto,
+  OrderDto,
+  ResolveDisputeRequest,
+  SellerApplicationDto,
+  SellerSubscriptionDto,
+  VerifySubscriptionPaymentRequest,
+} from "@/types/api";
 
 export interface GetApplicationsParams {
   page?: number;
@@ -45,4 +54,77 @@ export const adminApi = {
       request
     );
   },
+
+  /**
+   * Fetches all complaints/disputes across the platform for administrative review.
+   */
+  async getComplaints(page = 1, pageSize = 50): Promise<ComplaintDto[]> {
+    const params = new URLSearchParams();
+    if (page) params.set("page", page.toString());
+    if (pageSize) params.set("pageSize", pageSize.toString());
+    const query = params.toString();
+    return await apiClient.get<ComplaintDto[]>(
+      `/api/v1/admin/complaints${query ? `?${query}` : ""}`
+    );
+  },
+
+  /**
+   * Fetches single complaint details by ID.
+   */
+  async getComplaintById(id: string): Promise<ComplaintDto> {
+    return await apiClient.get<ComplaintDto>(`/api/v1/complaints/${id}`);
+  },
+
+  /**
+   * Records administrative resolution decision on a complaint.
+   */
+  async processComplaintDecision(
+    id: string,
+    request: AdminComplaintDecisionRequest
+  ): Promise<ComplaintDto> {
+    return await apiClient.post<ComplaintDto>(
+      `/api/v1/admin/complaints/${id}/decision`,
+      request
+    );
+  },
+
+  /**
+   * Resolves a disputed order as Completed or Cancelled with audit trail.
+   */
+  async resolveOrderDispute(
+    orderId: string,
+    request: ResolveDisputeRequest
+  ): Promise<OrderDto> {
+    return await apiClient.post<OrderDto>(
+      `/api/v1/admin/orders/${orderId}/resolve-dispute`,
+      request
+    );
+  },
+
+  /**
+   * Fetches seller subscription records and payment submissions for administrative verification.
+   */
+  async getSubscriptions(status?: string): Promise<SellerSubscriptionDto[]> {
+    const params = new URLSearchParams();
+    if (status && status !== "All") params.set("status", status);
+    const query = params.toString();
+    return await apiClient.get<SellerSubscriptionDto[]>(
+      `/api/v1/admin/subscriptions${query ? `?${query}` : ""}`
+    );
+  },
+
+  /**
+   * Approves or rejects a pending subscription payment submission.
+   * Approving updates the seller's active plan and listing capacity; rejecting logs an audit reason.
+   */
+  async verifySubscriptionPayment(
+    id: string,
+    request: VerifySubscriptionPaymentRequest
+  ): Promise<SellerSubscriptionDto> {
+    return await apiClient.post<SellerSubscriptionDto>(
+      `/api/v1/admin/subscriptions/${id}/verify`,
+      request
+    );
+  },
 };
+

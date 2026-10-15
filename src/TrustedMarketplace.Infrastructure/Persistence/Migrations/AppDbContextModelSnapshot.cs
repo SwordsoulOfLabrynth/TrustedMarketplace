@@ -315,6 +315,28 @@ namespace TrustedMarketplace.Infrastructure.Persistence.Migrations
                     b.ToTable("products", (string)null);
                 });
 
+            modelBuilder.Entity("TrustedMarketplace.Domain.Catalog.ProductEmbedding", b =>
+                {
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("IndexedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Vector")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("ProductId");
+
+                    b.ToTable("product_embeddings", (string)null);
+                });
+
             modelBuilder.Entity("TrustedMarketplace.Domain.Catalog.ProductImage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -712,6 +734,38 @@ namespace TrustedMarketplace.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("ExpiresAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<decimal?>("PaymentAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("PaymentCurrency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("MMK");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("PaymentProofStorageKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("PaymentSubmittedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("SellerUserId")
                         .HasColumnType("uuid");
 
@@ -720,11 +774,15 @@ namespace TrustedMarketplace.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<Guid>("SubscriptionPlanId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("TransactionReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -736,6 +794,10 @@ namespace TrustedMarketplace.Infrastructure.Persistence.Migrations
                     b.HasIndex("Status");
 
                     b.HasIndex("SubscriptionPlanId");
+
+                    b.HasIndex("TransactionReference")
+                        .IsUnique()
+                        .HasFilter("\"TransactionReference\" IS NOT NULL AND \"Status\" != 'Rejected'");
 
                     b.ToTable("seller_subscriptions", (string)null);
                 });
@@ -1223,6 +1285,17 @@ namespace TrustedMarketplace.Infrastructure.Persistence.Migrations
                     b.Navigation("SellerProfile");
                 });
 
+            modelBuilder.Entity("TrustedMarketplace.Domain.Catalog.ProductEmbedding", b =>
+                {
+                    b.HasOne("TrustedMarketplace.Domain.Catalog.Product", "Product")
+                        .WithOne("Embedding")
+                        .HasForeignKey("TrustedMarketplace.Domain.Catalog.ProductEmbedding", "ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("TrustedMarketplace.Domain.Catalog.ProductImage", b =>
                 {
                     b.HasOne("TrustedMarketplace.Domain.Catalog.Product", "Product")
@@ -1335,6 +1408,8 @@ namespace TrustedMarketplace.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("TrustedMarketplace.Domain.Catalog.Product", b =>
                 {
+                    b.Navigation("Embedding");
+
                     b.Navigation("Images");
                 });
 

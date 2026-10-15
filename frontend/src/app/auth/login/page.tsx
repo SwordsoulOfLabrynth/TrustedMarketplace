@@ -50,8 +50,8 @@ function getPostLoginRedirect(
     return defaultDestination;
   }
 
-  // Seller routes: only active Seller allowed
-  if (clean.startsWith("/seller") && !isSeller) {
+  // Seller routes: only active Seller allowed (except /seller/apply which is for prospective seller applicants)
+  if (clean.startsWith("/seller") && clean !== "/seller/apply" && !isSeller) {
     return defaultDestination;
   }
 

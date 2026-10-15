@@ -63,6 +63,13 @@ export interface StoreProfileDto {
   createdAtUtc: string;
 }
 
+export interface UpdateStoreProfileRequest {
+  storeName: string;
+  bio?: string | null;
+  contactPhone: string;
+  cityOrTownship?: string | null;
+}
+
 export interface SellerTrustProfileDto {
   sellerUserId: string;
   verificationStatus: "Unverified" | "Verified" | "PendingReverification" | string;
@@ -266,8 +273,80 @@ export interface SellerApplicationDto {
   evidence: VerificationEvidenceDto[];
 }
 
+export interface CreateSellerApplicationRequest {
+  proposedStoreName: string;
+  businessType: string;
+  contactPhone: string;
+}
+
 export interface AdminDecisionRequest {
   decision: "Approved" | "Rejected" | "MoreInformationRequired";
   reason: string;
+}
+
+export interface AdminComplaintDecisionRequest {
+  resolutionCode: "RefundAgreed" | "GoodsDeliveredConfirmed" | "WarningIssued" | "Unfounded" | string;
+  resolutionSummary: string;
+}
+
+export interface ResolveDisputeRequest {
+  resolvedStatus: "Completed" | "Cancelled";
+  reason: string;
+}
+
+export interface SubscriptionPlanDto {
+  id: string;
+  name: string;
+  maxActiveListings: number;
+  priceAmount: number;
+  currencyCode: string;
+  billingPeriod: string;
+  isActive: boolean;
+}
+
+export interface SellerQuotaDto {
+  planName: string;
+  maxActiveListings: number;
+  currentActiveListings: number;
+  canPublishMore: boolean;
+}
+
+export interface SellerSubscriptionDto {
+  id: string;
+  sellerUserId: string;
+  planName: string;
+  maxActiveListings: number;
+  status: "Active" | "PendingVerification" | "Rejected" | "Expired" | "Cancelled" | string;
+  startsAtUtc: string;
+  expiresAtUtc: string;
+  paymentMethod?: string | null;
+  transactionReference?: string | null;
+  paymentAmount?: number | null;
+  paymentCurrency?: string | null;
+  paymentSubmittedAtUtc?: string | null;
+  rejectionReason?: string | null;
+  storeName?: string | null;
+  durationMonths?: number | null;
+}
+
+export interface SubmitSubscriptionPaymentRequest {
+  subscriptionPlanId: string;
+  paymentMethod?: string | null;
+  transactionReference?: string | null;
+  durationMonths: number;
+}
+
+export interface VerifySubscriptionPaymentRequest {
+  decision: "Approved" | "Rejected";
+  reason?: string | null;
+  durationMonths?: number;
+}
+
+export interface PlatformPaymentMethodDto {
+  provider: "KBZPay" | "WavePay" | string;
+  accountName: string;
+  accountPhone: string;
+  instructions: string;
+  qrCodeUrl?: string | null;
 }
 

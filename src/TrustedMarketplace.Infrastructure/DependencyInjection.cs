@@ -149,6 +149,7 @@ public static class DependencyInjection
         services.AddScoped<IVerificationService, VerificationService>();
         services.AddScoped<TrustedMarketplace.Application.Stores.ISellerStoreService, TrustedMarketplace.Infrastructure.Stores.SellerStoreService>();
         services.AddScoped<TrustedMarketplace.Application.Subscriptions.ISubscriptionService, TrustedMarketplace.Infrastructure.Subscriptions.SubscriptionService>();
+        services.AddSingleton<TrustedMarketplace.Application.Search.ISemanticSearchService, TrustedMarketplace.Infrastructure.Search.MultilingualSemanticSearchService>();
         services.AddScoped<TrustedMarketplace.Application.Catalog.ICatalogService, TrustedMarketplace.Infrastructure.Catalog.CatalogService>();
         services.AddScoped<TrustedMarketplace.Application.Orders.IOrderService, TrustedMarketplace.Infrastructure.Orders.OrderService>();
         services.AddScoped<TrustedMarketplace.Application.Reviews.IReviewService, TrustedMarketplace.Infrastructure.Reviews.ReviewService>();

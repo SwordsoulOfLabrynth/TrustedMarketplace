@@ -21,7 +21,7 @@ public class SellerSubscriptionConfiguration : IEntityTypeConfiguration<SellerSu
         builder.Property(s => s.Status)
             .IsRequired()
             .HasConversion<string>()
-            .HasMaxLength(20);
+            .HasMaxLength(30);
 
         builder.Property(s => s.StartsAtUtc)
             .IsRequired();
@@ -30,6 +30,41 @@ public class SellerSubscriptionConfiguration : IEntityTypeConfiguration<SellerSu
             .IsRequired();
 
         builder.Property(s => s.AssignedByUserId)
+            .IsRequired(false);
+
+        // Payment lifecycle mappings
+        builder.Property(s => s.PaymentMethod)
+            .HasMaxLength(50)
+            .IsRequired(false);
+
+        builder.Property(s => s.TransactionReference)
+            .HasMaxLength(100)
+            .IsRequired(false);
+
+        builder.Property(s => s.PaymentAmount)
+            .HasPrecision(18, 2)
+            .IsRequired(false);
+
+        builder.Property(s => s.PaymentCurrency)
+            .HasMaxLength(3)
+            .HasDefaultValue("MMK")
+            .IsRequired();
+
+        builder.Property(s => s.PaymentSubmittedAtUtc)
+            .IsRequired(false);
+
+        builder.Property(s => s.PaymentProofStorageKey)
+            .HasMaxLength(500)
+            .IsRequired(false);
+
+        builder.Property(s => s.ReviewedByUserId)
+            .IsRequired(false);
+
+        builder.Property(s => s.ReviewedAtUtc)
+            .IsRequired(false);
+
+        builder.Property(s => s.RejectionReason)
+            .HasMaxLength(500)
             .IsRequired(false);
 
         builder.Property(s => s.CreatedAtUtc)
@@ -45,5 +80,10 @@ public class SellerSubscriptionConfiguration : IEntityTypeConfiguration<SellerSu
 
         builder.HasIndex(s => s.SellerUserId);
         builder.HasIndex(s => s.Status);
+
+        // Duplicate-reference protection across active and pending verification records
+        builder.HasIndex(s => s.TransactionReference)
+            .IsUnique()
+            .HasFilter("\"TransactionReference\" IS NOT NULL AND \"Status\" != 'Rejected'");
     }
 }

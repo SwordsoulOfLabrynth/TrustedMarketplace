@@ -3,16 +3,19 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShieldCheck, LogOut, User as UserIcon, ShieldAlert, Shield, ShoppingBag, Package, Store } from "lucide-react";
+import { ShieldCheck, LogOut, User as UserIcon, ShieldAlert, Shield, ShoppingBag, Package, Store, CreditCard } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 export function AppHeader() {
   const pathname = usePathname() || "";
-  const { user, store, isAuthenticated, isLoading, logout, isAdmin, isSeller } = useAuth();
+  const { user, store, isAuthenticated, isLoading, logout, isAdmin, isSeller, isBuyer } = useAuth();
 
   const isCatalogActive = pathname === "/products" || pathname.startsWith("/products/");
   const isOrdersActive = pathname === "/orders" || pathname.startsWith("/orders/");
-  const isSellerActive = pathname.startsWith("/seller");
+  const isSellerProductsActive = pathname === "/seller/products" || pathname.startsWith("/seller/products/");
+  const isSellerStoreActive = pathname === "/seller/store";
+  const isSubscriptionActive = pathname === "/seller/subscription";
+  const isApplyActive = pathname === "/seller/apply";
   const isAdminActive = pathname.startsWith("/admin");
 
   return (
@@ -70,21 +73,69 @@ export function AppHeader() {
             </Link>
           )}
 
-          {/* Seller Products Link when Authenticated as Seller */}
-          {isAuthenticated && isSeller && (
+          {/* Become a Seller Link when Authenticated as regular Buyer */}
+          {isAuthenticated && isBuyer && (
             <Link
-              href="/seller/products"
+              href="/seller/apply"
               className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                isSellerActive
+                isApplyActive
                   ? "bg-jade-100 text-jade-900"
                   : "text-ink-700 hover:text-jade-800 hover:bg-stone-100"
               }`}
-              title="My Store Listings & Photography"
-              aria-label="My Store Listings & Photography"
+              title="Apply to Become an Artisan Seller"
+              aria-label="Become a Seller"
             >
               <Store className="w-4 h-4 text-jade-800 shrink-0" />
-              <span className="hidden sm:inline">My Listings</span>
+              <span className="hidden sm:inline">Become a Seller</span>
+              <span className="sm:hidden">Sell</span>
             </Link>
+          )}
+
+          {/* Seller Links when Authenticated as Seller */}
+          {isAuthenticated && isSeller && (
+            <>
+              <Link
+                href="/seller/products"
+                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                  isSellerProductsActive
+                    ? "bg-jade-100 text-jade-900"
+                    : "text-ink-700 hover:text-jade-800 hover:bg-stone-100"
+                }`}
+                title="My Store Listings & Photography"
+                aria-label="My Store Listings & Photography"
+              >
+                <Package className="w-4 h-4 text-jade-800 shrink-0" />
+                <span className="hidden sm:inline">Listings</span>
+              </Link>
+
+              <Link
+                href="/seller/store"
+                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                  isSellerStoreActive
+                    ? "bg-jade-100 text-jade-900"
+                    : "text-ink-700 hover:text-jade-800 hover:bg-stone-100"
+                }`}
+                title="Manage Store Profile"
+                aria-label="Manage Store Profile"
+              >
+                <Store className="w-4 h-4 text-jade-800 shrink-0" />
+                <span className="hidden sm:inline">Store Profile</span>
+              </Link>
+
+              <Link
+                href="/seller/subscription"
+                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                  isSubscriptionActive
+                    ? "bg-jade-100 text-jade-900"
+                    : "text-ink-700 hover:text-jade-800 hover:bg-stone-100"
+                }`}
+                title="Subscription Plans & Quota"
+                aria-label="Subscription Plans & Quota"
+              >
+                <CreditCard className="w-4 h-4 text-jade-800 shrink-0" />
+                <span className="hidden sm:inline">Plans &amp; Quota</span>
+              </Link>
+            </>
           )}
 
           {/* Admin Console Link when Authenticated as Admin */}

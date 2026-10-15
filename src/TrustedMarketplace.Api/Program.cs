@@ -76,6 +76,12 @@ if (app.Environment.IsDevelopment())
         app.Configuration,
         logger,
         app.Environment.IsDevelopment());
+
+    using (var scope = app.Services.CreateScope())
+    {
+        var catalogService = scope.ServiceProvider.GetRequiredService<TrustedMarketplace.Application.Catalog.ICatalogService>();
+        await catalogService.EnsureProductEmbeddingsAsync();
+    }
 }
 
 app.UseHttpsRedirection();

@@ -182,7 +182,7 @@ function ProductCatalogContent() {
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search by product title or craft keyword..."
+              placeholder="Search in English or မြန်မာ — e.g. marionette, ယွန်းထည်, lotus silk..."
               className="w-full pl-9 pr-8 py-2.5 text-xs rounded-xl border border-stone-300 bg-white text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-jade-600/20 focus:border-jade-700 transition-all shadow-2xs font-medium"
             />
             <Search className="w-4 h-4 text-ink-400 absolute left-3 top-3 pointer-events-none" />
@@ -217,6 +217,37 @@ function ProductCatalogContent() {
             <span className="hidden sm:inline text-xs">Price</span>
           </button>
         </form>
+
+        {/* Quick Semantic Suggestion Chips */}
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-ink-500 pt-0.5">
+          <span className="font-medium text-ink-600 flex items-center gap-1">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-jade-600" />
+            <span>Try:</span>
+          </span>
+          {[
+            { label: "ရုပ်သေး (Puppets)", q: "ရုပ်သေး" },
+            { label: "ယွန်းထည် (Lacquer)", q: "ယွန်းထည်" },
+            { label: "ကြာပိုး (Lotus Silk)", q: "ကြာပိုး" },
+            { label: "ကျွန်းသစ် (Teak)", q: "ကျွန်းသစ်" },
+            { label: "လက်ဖက် (Tea)", q: "လက်ဖက်" },
+          ].map(({ label, q }) => (
+            <button
+              key={q}
+              type="button"
+              onClick={() => {
+                setSearchInput(q);
+                updateUrl({ keyword: q, page: 1 });
+              }}
+              className={`px-2 py-0.5 rounded-lg border text-[11px] transition-colors shadow-2xs cursor-pointer ${
+                currentKeyword === q
+                  ? "bg-jade-100 border-jade-400 text-jade-900 font-semibold"
+                  : "bg-white border-stone-200 hover:border-jade-300 text-ink-700"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         {/* Collapsible Price Filter Panel */}
         {showPriceFilter && (

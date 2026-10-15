@@ -100,14 +100,24 @@ export default function Home() {
                 <span>Orders</span>
                 <ArrowRight className="w-3 h-3" />
               </Link>
-            ) : (
+            ) : isAdmin ? (
               <Link
-                href="/products"
-                className="text-[11px] font-semibold text-jade-800 hover:underline shrink-0 flex items-center gap-0.5"
+                href="/admin"
+                className="text-[11px] font-semibold text-stone-800 hover:underline shrink-0 flex items-center gap-0.5"
               >
-                <span>Catalog</span>
+                <span>Admin Console</span>
                 <ArrowRight className="w-3 h-3" />
               </Link>
+            ) : (
+              <div className="flex items-center gap-2 shrink-0">
+                <Link
+                  href="/seller/apply"
+                  className="text-[11px] font-semibold text-jade-800 hover:underline flex items-center gap-0.5"
+                >
+                  <span>Become a Seller</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
             )}
           </div>
         )}
@@ -130,7 +140,7 @@ export default function Home() {
                 type="text"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder="Search marionettes, lacquerware, textiles..."
+                placeholder="Search in English or မြန်မာ — e.g. puppet, ယွန်းထည်, lotus silk..."
                 className="w-full pl-9 pr-20 py-2 rounded-xl bg-white border border-stone-300 text-ink-900 text-xs sm:text-sm placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-jade-600/20 focus:border-jade-700 transition-all font-medium shadow-2xs"
               />
               <Search className="w-4 h-4 text-ink-400 absolute left-3 pointer-events-none" />
@@ -143,17 +153,25 @@ export default function Home() {
             </div>
           </form>
 
-          {/* Quick Craft Filter Chips */}
+          {/* Quick Bilingual Craft Filter Chips */}
           <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-ink-500">
-            <span className="font-medium text-ink-600">Popular:</span>
-            {["Marionettes", "Lacquerware", "Lotus Silk"].map((tag) => (
+            <span className="font-medium text-ink-600 flex items-center gap-1">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-jade-600" />
+              <span>Semantic Search:</span>
+            </span>
+            {[
+              { label: "ရုပ်သေး (Puppets)", q: "ရုပ်သေး" },
+              { label: "ယွန်းထည် (Lacquerware)", q: "ယွန်းထည်" },
+              { label: "ကြာပိုးထည် (Lotus Silk)", q: "ကြာပိုးထည်" },
+              { label: "ကျွန်းသစ် (Teakwood)", q: "ကျွန်းသစ်" },
+            ].map(({ label, q }) => (
               <button
-                key={tag}
+                key={q}
                 type="button"
-                onClick={() => handleQuickTagClick(tag)}
-                className="px-2 py-0.5 rounded-lg bg-white border border-stone-200/90 hover:border-jade-300 text-ink-700 transition-colors shadow-2xs text-[11px] cursor-pointer"
+                onClick={() => handleQuickTagClick(q)}
+                className="px-2 py-0.5 rounded-lg bg-white border border-stone-200/90 hover:border-jade-400 hover:text-jade-800 text-ink-700 transition-colors shadow-2xs text-[11px] cursor-pointer"
               >
-                {tag}
+                {label}
               </button>
             ))}
           </div>

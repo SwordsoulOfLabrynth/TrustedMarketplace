@@ -119,11 +119,12 @@ This document serves as the binding single source of truth for architectural, do
   - Seller Application, Private NRC Upload, Admin Approval
   - Store Profile CRUD & Listing Management (Approved Sellers)
   - Public Catalog Browsing, Keyword Search, Pagination
+  - Multilingual Burmese / English Semantic Search (384-dimensional dense vectors, pgvector, NFC normalization, syllable segmentation, craft concept clusters, hybrid lexical/semantic ranking)
   - Non-Custodial Order Placement & Server-Enforced Lifecycle (Buyer Confirmation Required)
   - Order Transaction Review Submission
   - Complaint Submission & Admin Dispute Resolution
   - Explainable Seller Trust Profile
-  - Admin-Assigned Subscriptions (Mock)
+  - Platform QR Subscription Payments (KBZPay, WavePay) & Admin Verification Queue
   - Audit Logging of Sensitive Actions
 
 ---

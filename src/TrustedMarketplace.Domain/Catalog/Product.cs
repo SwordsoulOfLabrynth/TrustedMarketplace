@@ -22,6 +22,7 @@ public class Product : BaseEntity
     public SellerProfile? SellerProfile { get; private set; }
     public Category? Category { get; private set; }
     public IReadOnlyCollection<ProductImage> Images => _images.AsReadOnly();
+    public ProductEmbedding? Embedding { get; private set; }
 
     private Product() : base() { }
 
