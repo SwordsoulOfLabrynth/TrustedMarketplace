@@ -21,10 +21,15 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // Configure Cross-Origin Resource Sharing (CORS) with credentials support
+// Cloud-friendly: reads CORS_ALLOWED_ORIGINS env var (comma-separated) first,
+// then falls back to Cors:AllowedOrigins config array, then localhost defaults.
 builder.Services.AddCors(options =>
 {
-    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-        ?? new[] { "http://localhost:3000", "http://localhost:5173" };
+    var corsEnv = builder.Configuration["CORS_ALLOWED_ORIGINS"];
+    var allowedOrigins = !string.IsNullOrWhiteSpace(corsEnv)
+        ? corsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        : builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+          ?? new[] { "http://localhost:3000", "http://localhost:5173" };
 
     options.AddDefaultPolicy(policy =>
     {
@@ -84,9 +89,10 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-app.UseHttpsRedirection();
-
+// CORS must come before HTTPS redirect so preflight OPTIONS responses are never redirected
 app.UseCors();
+
+app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
