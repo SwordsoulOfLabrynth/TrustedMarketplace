@@ -481,10 +481,14 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 
-# Local storage and private evidence (never commit verification evidence or uploads)
-storage/
-uploads/
-private_evidence/
+# Local runtime storage and private evidence (never commit verification evidence or uploads)
+# Note: 'storage/' is intentionally scoped to runtime roots, NOT src/*/Storage/ source folders
+/storage/
+/uploads/
+/private_evidence/
+**/app/storage/
+src/**/bin/
+src/**/obj/
 
 # Local sensitive configuration overrides
 appsettings.Local.json
