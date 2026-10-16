@@ -110,20 +110,31 @@ public class AuthController : ControllerBase
         return Ok(profile);
     }
 
-    private void SetRefreshTokenCookie(string refreshToken, DateTime expiresAtUtc)
+    private SameSiteMode ResolveRefreshTokenSameSiteMode()
     {
-        var sameSiteStr = _configuration["Jwt:RefreshTokenCookieSameSite"] ?? "Lax";
-        var sameSiteMode = sameSiteStr.ToLowerInvariant() switch
+        var sameSiteStr = _configuration["Jwt:RefreshTokenCookieSameSite"];
+        return sameSiteStr?.ToLowerInvariant() switch
         {
             "strict" => SameSiteMode.Strict,
+            "lax" => SameSiteMode.Lax,
             "none" => SameSiteMode.None,
-            _ => SameSiteMode.Lax
+            _ => !HttpContext.Request.Host.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                ? SameSiteMode.None
+                : SameSiteMode.Lax
         };
+    }
+
+    private void SetRefreshTokenCookie(string refreshToken, DateTime expiresAtUtc)
+    {
+        var sameSiteMode = ResolveRefreshTokenSameSiteMode();
+        var isSecure = sameSiteMode == SameSiteMode.None
+            || Request.IsHttps
+            || !HttpContext.Request.Host.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase);
 
         var cookieOptions = new CookieOptions
         {
             HttpOnly = true,
-            Secure = Request.IsHttps || !HttpContext.Request.Host.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase),
+            Secure = isSecure,
             SameSite = sameSiteMode,
             Expires = expiresAtUtc,
             Path = "/api/v1/auth"
@@ -134,18 +145,15 @@ public class AuthController : ControllerBase
 
     private void DeleteRefreshTokenCookie()
     {
-        var sameSiteStr = _configuration["Jwt:RefreshTokenCookieSameSite"] ?? "Lax";
-        var sameSiteMode = sameSiteStr.ToLowerInvariant() switch
-        {
-            "strict" => SameSiteMode.Strict,
-            "none" => SameSiteMode.None,
-            _ => SameSiteMode.Lax
-        };
+        var sameSiteMode = ResolveRefreshTokenSameSiteMode();
+        var isSecure = sameSiteMode == SameSiteMode.None
+            || Request.IsHttps
+            || !HttpContext.Request.Host.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase);
 
         Response.Cookies.Delete(RefreshTokenCookieName, new CookieOptions
         {
             HttpOnly = true,
-            Secure = Request.IsHttps || !HttpContext.Request.Host.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase),
+            Secure = isSecure,
             SameSite = sameSiteMode,
             Path = "/api/v1/auth"
         });

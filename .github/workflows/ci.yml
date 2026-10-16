@@ -30,6 +30,7 @@ jobs:
     env:
       ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=trusted_marketplace_test;Username=postgres;Password=postgres"
       ASPNETCORE_ENVIRONMENT: Testing
+      Jwt__Key: "CI_TEST_JWT_SECRET_KEY_MIN_32_CHARACTERS_LONG_12345"
 
     steps:
       - name: Checkout

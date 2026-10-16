@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.HttpOverrides;
 using Scalar.AspNetCore;
 using Serilog;
 using TrustedMarketplace.Api.Authorization;
@@ -21,15 +22,49 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // Configure Cross-Origin Resource Sharing (CORS) with credentials support
-// Cloud-friendly: reads CORS_ALLOWED_ORIGINS env var (comma-separated) first,
-// then falls back to Cors:AllowedOrigins config array, then localhost defaults.
+// Resolves origins in priority:
+// 1. CORS_ALLOWED_ORIGINS env var (comma-separated list)
+// 2. Cors:AllowedOrigins configuration array
+// 3. Fallback defaults (production Vercel origin + local dev origins)
 builder.Services.AddCors(options =>
 {
+    var rawOrigins = new List<string>();
+
     var corsEnv = builder.Configuration["CORS_ALLOWED_ORIGINS"];
-    var allowedOrigins = !string.IsNullOrWhiteSpace(corsEnv)
-        ? corsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-        : builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-          ?? new[] { "http://localhost:3000", "http://localhost:5173" };
+    if (!string.IsNullOrWhiteSpace(corsEnv))
+    {
+        rawOrigins.AddRange(corsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+
+    var configOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+    if (configOrigins != null && configOrigins.Length > 0)
+    {
+        rawOrigins.AddRange(configOrigins);
+    }
+
+    if (rawOrigins.Count == 0)
+    {
+        rawOrigins.AddRange([
+            "https://trusted-marketplace.vercel.app",
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "https://localhost:3000",
+            "https://localhost:5173"
+        ]);
+    }
+    else
+    {
+        // Guarantee the canonical production origin is always permitted
+        rawOrigins.Add("https://trusted-marketplace.vercel.app");
+    }
+
+    // Sanitize: trim whitespace, strip trailing slashes, remove blanks, deduplicate case-insensitively
+    var allowedOrigins = rawOrigins
+        .Where(o => !string.IsNullOrWhiteSpace(o))
+        .Select(o => o.Trim().TrimEnd('/'))
+        .Where(o => !string.IsNullOrWhiteSpace(o))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
 
     options.AddDefaultPolicy(policy =>
     {
@@ -57,6 +92,16 @@ builder.Services.AddInfrastructureJwtAuthentication(builder.Configuration, build
 builder.Services.AddMarketplaceAuthorization();
 
 var app = builder.Build();
+
+// Forwarded headers MUST be evaluated first so scheme, remote IP, and host are accurate
+// behind reverse proxies (Render / Cloudflare / Nginx).
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
+forwardedHeadersOptions.KnownNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
 
 // Correlation ID middleware early in the pipeline to enrich logging context
 app.UseMiddleware<CorrelationIdMiddleware>();
@@ -89,10 +134,16 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-// CORS must come before HTTPS redirect so preflight OPTIONS responses are never redirected
+// CORS must come before HTTPS redirect and authentication so preflight OPTIONS responses are handled immediately
 app.UseCors();
 
-app.UseHttpsRedirection();
+// In Production behind a reverse proxy (Render / Cloudflare), TLS termination and HTTPS redirection
+// are handled by the edge. Disabling container-level HTTPS redirection in Production prevents
+// internal HTTP health check probes (Render / Docker HEALTHCHECK) from receiving 307 redirects.
+if (!app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

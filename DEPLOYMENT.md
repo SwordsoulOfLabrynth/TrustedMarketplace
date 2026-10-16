@@ -49,12 +49,14 @@ dotnet ef database update `
 1. Go to [render.com](https://render.com) → **Sign up** → **New → Web Service**
 2. Connect your GitHub repo
 3. Render auto-detects `render.yaml` → click **Apply**
-4. In the Render dashboard, go to **Environment** and add these **secret** variables:
+4. In the Render dashboard, go to **Environment** and verify/add these variables:
 
-   | Key | Value |
-   |-----|-------|
-   | `ConnectionStrings__DefaultConnection` | *(Neon URL from Step 1)* |
-   | `Jwt__Key` | *(random 32+ char string — generate below)* |
+   | Key | Value | Notes |
+   |-----|-------|-------|
+   | `ConnectionStrings__DefaultConnection` | *(Neon URL from Step 1)* | Secret: full postgresql connection string |
+   | `Jwt__Key` | *(random 32+ char secret)* | Secret: generate with PowerShell command below |
+   | `CORS_ALLOWED_ORIGINS` | `https://trusted-marketplace.vercel.app` | Required for browser cross-origin requests |
+   | `Jwt__RefreshTokenCookieSameSite` | `None` | Required for cross-site HttpOnly refresh cookies |
 
    Generate a JWT secret:
    ```powershell
@@ -62,9 +64,14 @@ dotnet ef database update `
    ```
 
 5. Click **Deploy** — wait ~5 min for Docker build
-6. Your API will be live at: `https://trusted-marketplace-api.onrender.com`
+6. Note the exact service URL provided by Render (e.g., `https://trustedmarketplace-hyr9.onrender.com` or `https://trusted-marketplace-api.onrender.com`).
+   Verify it returns 200 OK:
+   ```powershell
+   curl -i "https://<your-render-service>.onrender.com/api/v1/health"
+   ```
 
 > ⚠️ Free tier sleeps after 15 min of inactivity. First cold start = ~30s delay.
+> ⚠️ If you see `404 Not Found` with `x-render-routing: no-server`, check Render deployment logs: the container either crashed (e.g. missing `Jwt__Key` / database connection) or the service is suspended.
 
 ---
 
@@ -77,29 +84,36 @@ dotnet ef database update `
 
    | Key | Value |
    |-----|-------|
-   | `NEXT_PUBLIC_API_URL` | `https://trusted-marketplace-api.onrender.com` |
+   | `NEXT_PUBLIC_API_URL` | `https://<your-render-service>.onrender.com` (exact URL from Render, without trailing slash) |
 
 5. Click **Deploy** — done in ~2 min
 6. Your frontend will be live at: `https://trusted-marketplace.vercel.app`
 
 ---
 
-## Step 5 — Update CORS on API
+## Step 5 — Verify CORS & Cross-Site Authentication
 
-After Vercel gives you the final URL, set it in Render's Environment variables:
+1. Verify preflight OPTIONS response:
+   ```powershell
+   curl -i -X OPTIONS "https://<your-render-service>.onrender.com/api/v1/categories" `
+     -H "Origin: https://trusted-marketplace.vercel.app" `
+     -H "Access-Control-Request-Method: GET"
+   ```
+   Must return `204 No Content` (or `200 OK`) with:
+   - `Access-Control-Allow-Origin: https://trusted-marketplace.vercel.app`
+   - `Access-Control-Allow-Credentials: true`
 
-| Key | Value |
-|-----|-------|
-| `Cors__AllowedOrigins__0` | `https://trusted-marketplace.vercel.app` |
-
-Then redeploy the API service on Render.
+2. Open `https://trusted-marketplace.vercel.app` in your browser and verify in DevTools Network tab that:
+   - `/api/v1/categories` returns 200 OK
+   - `/api/v1/products?pageSize=6` returns 200 OK
+   - `/api/v1/auth/refresh` responds with 401 Unauthorized (when not logged in) with correct CORS headers and no CORS errors.
 
 ---
 
 ## CI — GitHub Actions
 
 The file `.github/workflows/ci.yml` automatically:
-- Runs all 204 tests (117 unit + 87 integration) against a real PostgreSQL container
+- Runs all tests against a real PostgreSQL container
 - Builds the Next.js frontend
 
 Triggers on every push or PR to `main`.
@@ -108,9 +122,10 @@ Triggers on every push or PR to `main`.
 
 ## Checklist
 
-- [ ] Neon project created, extensions enabled
+- [ ] Neon project created, extensions enabled (`vector`, `pg_trgm`)
 - [ ] EF Core migrations applied to Neon
-- [ ] Render service deployed, secret env vars set
-- [ ] Vercel project deployed with `NEXT_PUBLIC_API_URL`
-- [ ] CORS updated on Render with Vercel domain
+- [ ] Render service deployed with `ConnectionStrings__DefaultConnection` & `Jwt__Key`
+- [ ] `CORS_ALLOWED_ORIGINS` set to `https://trusted-marketplace.vercel.app`
+- [ ] `Jwt__RefreshTokenCookieSameSite` set to `None`
+- [ ] Vercel project deployed with matching `NEXT_PUBLIC_API_URL`
 - [ ] CI passing on GitHub Actions

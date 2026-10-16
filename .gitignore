@@ -487,6 +487,7 @@ $RECYCLE.BIN/
 /uploads/
 /private_evidence/
 **/app/storage/
+src/TrustedMarketplace.Api/storage/
 src/**/bin/
 src/**/obj/
 
