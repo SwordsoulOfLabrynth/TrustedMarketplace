@@ -24,7 +24,8 @@ public static class DependencyInjection
     {
         services.AddScoped<AuditableEntitySaveChangesInterceptor>();
 
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        var rawConnectionString = configuration.GetConnectionString("DefaultConnection");
+        var connectionString = NormalizePostgresConnectionString(rawConnectionString ?? string.Empty);
 
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
@@ -34,6 +35,40 @@ public static class DependencyInjection
         });
 
         return services;
+    }
+
+    public static string NormalizePostgresConnectionString(string connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return connectionString;
+        }
+
+        if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
+            connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+        {
+            var uri = new Uri(connectionString);
+            var userInfo = uri.UserInfo.Split(':', 2);
+            var username = Uri.UnescapeDataString(userInfo[0]);
+            var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty;
+            var host = uri.Host;
+            var port = uri.Port > 0 ? uri.Port : 5432;
+            var database = uri.AbsolutePath.TrimStart('/');
+
+            var builder = new Npgsql.NpgsqlConnectionStringBuilder
+            {
+                Host = host,
+                Port = port,
+                Database = database,
+                Username = username,
+                Password = password,
+                SslMode = Npgsql.SslMode.Require
+            };
+
+            return builder.ConnectionString;
+        }
+
+        return connectionString;
     }
 
     public static IServiceCollection AddInfrastructureIdentity(
