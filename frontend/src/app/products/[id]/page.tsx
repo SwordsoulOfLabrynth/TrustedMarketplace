@@ -113,8 +113,8 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
             <h1 className="text-base font-bold text-ink-900">
               Product Not Found
             </h1>
-            <p className="text-xs text-ink-500 mt-1 myanmar-text">
-              ရှာဖွေနေသော ပစ္စည်းကို ရှာမတွေ့ပါ သို့မဟုတ် ရောင်းချခြင်းမှ ရပ်ဆိုင်းထားပါသည်။
+            <p className="text-xs text-ink-500 mt-1">
+              The requested product could not be found or has been unlisted.
             </p>
           </div>
           <Link
@@ -352,13 +352,13 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                   className="w-full py-3.5 px-5 rounded-2xl bg-jade-800 hover:bg-jade-900 text-white font-bold text-sm tracking-wide shadow-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <ShoppingBag className="w-4 h-4" />
-                  <span>{isAuthenticated ? "Order Directly from Artisan · ဝယ်ယူရန်" : "Sign In to Place Order"}</span>
+                  <span>{isAuthenticated ? "Order Directly from Artisan" : "Sign In to Place Order"}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               )}
 
-              <p className="text-[11px] text-ink-500 text-center leading-relaxed myanmar-text">
-                တိုက်ရိုက်အရောင်းအဝယ် စနစ်ဖြစ်ပြီး အော်ဒါတင်ပြီးနောက် ရောင်းသူနှင့် KBZPay / WavePay ဖြင့် တိုက်ရိုက်ဆက်သွယ် ချိတ်ဆက်ပါမည်။
+              <p className="text-[11px] text-ink-500 text-center leading-relaxed">
+                Direct non-custodial transaction: After placing your order, the artisan will contact you to coordinate KBZPay, WavePay, or Cash on Delivery.
               </p>
             </div>
 

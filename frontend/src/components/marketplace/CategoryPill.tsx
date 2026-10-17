@@ -10,24 +10,12 @@ interface CategoryPillProps {
   count?: number;
 }
 
-const MYANMAR_CATEGORY_NAMES: Record<string, string> = {
-  "handicrafts & art": "လက်မှုပညာနှင့် အနုပညာ",
-  "traditional fashion & textiles": "ရိုးရာအထည်အလိပ်",
-  "local food & tea": "ဒေသထွက် အစားအသောက်",
-  "electronics & gadgets": "အီလက်ထရောနစ်",
-  all: "အားလုံး",
-};
-
 export function CategoryPill({
   name,
   isActive,
   onClick,
   count,
 }: CategoryPillProps) {
-  const burmeseSub =
-    MYANMAR_CATEGORY_NAMES[name.toLowerCase()] ||
-    MYANMAR_CATEGORY_NAMES["all"];
-
   return (
     <button
       type="button"
@@ -52,13 +40,6 @@ export function CategoryPill({
           </span>
         )}
       </div>
-      <span
-        className={`block text-[10px] myanmar-text leading-tight mt-0.5 ${
-          isActive ? "text-jade-100" : "text-ink-500"
-        }`}
-      >
-        {burmeseSub}
-      </span>
     </button>
   );
 }

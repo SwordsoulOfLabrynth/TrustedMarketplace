@@ -114,8 +114,8 @@ function LoginForm() {
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900">
             Sign In to TrustedMarketplace
           </h1>
-          <p className="text-xs text-ink-500 myanmar-text leading-relaxed">
-            လုံခြုံစိတ်ချရသော အကောင့်သို့ ဝင်ရောက်ပါ
+          <p className="text-xs text-ink-500 leading-relaxed">
+            Access your verified artisan and buyer account securely
           </p>
         </div>
 

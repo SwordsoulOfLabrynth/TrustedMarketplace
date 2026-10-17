@@ -37,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="my" className={`${inter.variable} ${notoSansMyanmar.variable}`}>
+    <html lang="en" className={`${inter.variable} ${notoSansMyanmar.variable}`}>
       <body className="antialiased selection:bg-jade-100 selection:text-jade-900">
         <AuthProvider>{children}</AuthProvider>
       </body>

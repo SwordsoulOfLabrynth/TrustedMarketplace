@@ -130,8 +130,8 @@ export default function SellerProductsPage() {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900">
               Manage Product Listings & Photography
             </h1>
-            <p className="text-xs text-ink-500 myanmar-text">
-              ရောင်းချမည့် ပစ္စည်းများနှင့် ဓာတ်ပုံများကို စီမံခန့်ခွဲရန်
+            <p className="text-xs text-ink-500">
+              Organize, update, and publish your handcrafted catalog items and workshop photography.
             </p>
           </div>
 
@@ -341,9 +341,9 @@ export default function SellerProductsPage() {
             </div>
             <div className="space-y-1">
               <h2 className="text-sm font-bold text-ink-900">No listings found</h2>
-              <p className="text-xs text-ink-500 myanmar-text">
+              <p className="text-xs text-ink-500">
                 {filter === "all"
-                  ? "သင်၏ အရောင်းဆိုင်တွင် ကုန်ပစ္စည်း မရှိသေးပါ။ အသစ်တင်ရန် အောက်ပါ ခလုတ်ကို နှိပ်ပါ။"
+                  ? "You don't have any products in your store yet. Click below to add your first item."
                   : `No ${filter.toLowerCase()} products found in this category.`}
               </p>
             </div>

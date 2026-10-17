@@ -141,8 +141,8 @@ export default function NewProductPage() {
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900">
             Create New Product Listing
           </h1>
-          <p className="text-xs text-ink-500 myanmar-text">
-            ကုန်ပစ္စည်းအချက်အလက်များကို ဖြည့်သွင်းပြီးနောက် စစ်မှန်သော ဓာတ်ပုံများ တင်နိုင်ပါမည်။
+          <p className="text-xs text-ink-500">
+            Enter your product details below. You can upload authentic workshop photography in the next step.
           </p>
         </div>
 

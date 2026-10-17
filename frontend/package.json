@@ -19,7 +19,8 @@
     "test:subscription": "node scripts/test-subscription-payment-lifecycle.mjs",
     "test:phase34": "node scripts/test-phase3-phase4-flow.mjs",
     "test:semantic": "node scripts/test-phase5-semantic-search.mjs",
-    "test:all": "node scripts/test-auth-integration.mjs && node scripts/test-catalog-integration.mjs && node scripts/test-order-lifecycle.mjs && node scripts/test-buyer-to-seller-order-visibility.mjs && node scripts/test-phase2-seller-image-flow.mjs && node scripts/test-buyer-seller-application-flow.mjs && node scripts/test-admin-disputes-flow.mjs && node scripts/test-seller-store-flow.mjs && node scripts/test-subscription-payment-lifecycle.mjs && node scripts/test-phase3-phase4-flow.mjs && node scripts/test-phase5-semantic-search.mjs"
+    "test:english-ui": "node scripts/test-english-ui-audit.mjs",
+    "test:all": "node scripts/test-english-ui-audit.mjs && node scripts/test-auth-integration.mjs && node scripts/test-catalog-integration.mjs && node scripts/test-order-lifecycle.mjs && node scripts/test-buyer-to-seller-order-visibility.mjs && node scripts/test-phase2-seller-image-flow.mjs && node scripts/test-buyer-seller-application-flow.mjs && node scripts/test-admin-disputes-flow.mjs && node scripts/test-seller-store-flow.mjs && node scripts/test-subscription-payment-lifecycle.mjs && node scripts/test-phase3-phase4-flow.mjs && node scripts/test-phase5-semantic-search.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

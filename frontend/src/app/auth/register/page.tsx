@@ -100,8 +100,8 @@ export default function RegisterPage() {
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900">
             Create Buyer Account
           </h1>
-          <p className="text-xs text-ink-500 myanmar-text leading-relaxed">
-            လုံခြုံစိတ်ချရသော ဝယ်သူအကောင့် အသစ်ဖွင့်ပါ
+          <p className="text-xs text-ink-500 leading-relaxed">
+            Join TrustedMarketplace to discover and order authentic handcrafted goods directly from verified artisans
           </p>
         </div>
 

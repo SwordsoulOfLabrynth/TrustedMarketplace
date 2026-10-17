@@ -187,8 +187,8 @@ export default function SellerStoreProfilePage() {
             <h1 className="text-base font-bold text-ink-900">
               Artisan Seller Account Required
             </h1>
-            <p className="text-xs text-ink-500 mt-1.5 myanmar-text max-w-sm mx-auto">
-              အရောင်းဆိုင် အချက်အလက်များ ပြင်ဆင်ရန် အတည်ပြုထားသော ရောင်းသူ အကောင့် လိုအပ်ပါသည်။
+            <p className="text-xs text-ink-500 mt-1.5 max-w-sm mx-auto">
+              An approved artisan seller account is required to edit store details.
             </p>
           </div>
           <Link
@@ -234,8 +234,8 @@ export default function SellerStoreProfilePage() {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900">
               Manage Store Profile & Presence
             </h1>
-            <p className="text-xs text-ink-500 myanmar-text">
-              ဆိုင်အချက်အလက်များနှင့် လူသိရှင်ကြား ပြသလိုသည့် အသေးစိတ်များကို ပြင်ဆင်ရန်
+            <p className="text-xs text-ink-500">
+              Update your public store details, artisan workshop bio, and contact info.
             </p>
           </div>
 
@@ -293,12 +293,12 @@ export default function SellerStoreProfilePage() {
                     slug: {store.slug}
                   </span>
                 </div>
-                <p className="text-xs leading-relaxed myanmar-text">
+                <p className="text-xs leading-relaxed">
                   {isReverificationRejected
-                    ? "ဆိုင်အမည် ပြောင်းလဲမှုအား စီမံခန့်ခွဲသူမှ ငြင်းပယ်ထားပါသည်။ မူဝါဒနှင့် ကိုက်ညီသော ဆိုင်အမည်သို့ ပြန်လည်ပြင်ဆင်တင်ပြနိုင်ပါသည်။ ပစ္စည်းသစ်တင်ခွင့်ကို ခေတ္တရပ်ဆိုင်းထားပါသည်။"
+                    ? "Your requested store name change was rejected by administrators. You may update your store name in compliance with policy. Creating new product listings is paused until verified."
                     : isPendingReverification
-                    ? "ဆိုင်အမည် ပြောင်းလဲထားသဖြင့် စီမံခန့်ခွဲသူမှ ပြန်လည်စစ်ဆေးနေပါသည်။ လက်ရှိတင်ထားပြီး ပစ္စည်းများအား ဆက်လက်ရောင်းချနိုင်သော်လည်း ပစ္စည်းသစ်တင်ခွင့်ကို ခေတ္တရပ်ဆိုင်းထားပါသည်။"
-                    : "သင်၏ ဆိုင်အချက်အလက်များကို နိုင်ငံသားမှတ်ပုံတင်နှင့် စီးပွားရေးအထောက်အထားများဖြင့် အတည်ပြုပြီးဖြစ်ပါသည်။"}
+                    ? "Your store name change is currently under review by administrators. Existing listings remain visible, but new product creation is paused until verification is complete."
+                    : "Your store profile is verified with verified artisan credentials and business identity documents."}
                 </p>
               </div>
             </div>
@@ -332,8 +332,8 @@ export default function SellerStoreProfilePage() {
               <span className="font-bold block">
                 Store-Name Change Re-Verification Warning (Rule SEC-04)
               </span>
-              <p className="leading-relaxed myanmar-text">
-                ဆိုင်အမည်ကို ပြောင်းလဲပါက အယောင်ဆောင်ရောင်းချမှုများကို ကာကွယ်ရန်အတွက် ဆိုင်၏အခြေအနေသည် “ပြန်လည်စစ်ဆေးဆဲ (PendingReverification)” သို့ အလိုအလျောက် ပြောင်းလဲသွားပါမည်။ စီမံခန့်ခွဲသူမှ ပြန်လည်စစ်ဆေးအတည်မပြုမီအထိ ပစ္စည်းအသစ်များ တင်ခွင့်ရမည် မဟုတ်ပါ။
+              <p className="leading-relaxed">
+                Changing your store name triggers automatic security re-verification (status becomes PendingReverification) to protect buyers against impersonation. New product listings cannot be created until an administrator re-approves the updated name.
               </p>
             </div>
           </div>

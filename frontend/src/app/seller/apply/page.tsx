@@ -30,17 +30,17 @@ import { MobileViewportContainer } from "@/components/layout/MobileViewportConta
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const BUSINESS_TYPES = [
-  { value: "IndividualCrafter", label: "Individual Artisan / Crafter (လက်မှုပညာရှင်)" },
-  { value: "ArtisanWorkshop", label: "Traditional Workshop / Guild (ရိုးရာလက်မှု အလုပ်ရုံ)" },
-  { value: "RetailShop", label: "Craft & Heritage Retail Store (လက်လီအရောင်းဆိုင်)" },
-  { value: "TraditionalManufacturer", label: "Heritage Manufacturer (ရိုးရာထုတ်လုပ်သူ)" },
+  { value: "IndividualCrafter", label: "Individual Crafter / Artisan" },
+  { value: "ArtisanWorkshop", label: "Traditional Workshop / Guild" },
+  { value: "RetailShop", label: "Craft & Heritage Retail Store" },
+  { value: "TraditionalManufacturer", label: "Heritage Manufacturer" },
 ];
 
 const EVIDENCE_TYPES = [
-  { value: "NationalIdFront", label: "NRC Card (Front) / နိုင်ငံသားစိစစ်ရေးကတ် အရှေ့" },
-  { value: "NationalIdBack", label: "NRC Card (Back) / နိုင်ငံသားစိစစ်ရေးကတ် အနောက်" },
-  { value: "BusinessLicense", label: "City Municipal Trade License / မြို့နယ်လုပ်ငန်းလိုင်စင်" },
-  { value: "UtilityBill", label: "Workshop Utility Bill / အလုပ်ရုံ ရေ/မီး ဘေလ်" },
+  { value: "NationalIdFront", label: "National Registration Card (NRC Front)" },
+  { value: "NationalIdBack", label: "National Registration Card (NRC Back)" },
+  { value: "BusinessLicense", label: "City Municipal Trade License" },
+  { value: "UtilityBill", label: "Workshop Utility Bill / Proof of Address" },
 ];
 
 function formatBytes(bytes: number): string {
@@ -306,8 +306,8 @@ export default function SellerApplicationPage() {
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900">
             Artisan Seller Verification Application
           </h1>
-          <p className="text-xs text-ink-600 leading-relaxed myanmar-text">
-            မြန်မာ့ရိုးရာ လက်မှုပညာရှင်များနှင့် ကုန်သည်များအတွက် ယုံကြည်စိတ်ချရသော ရောင်းချသူအဖြစ် လျှောက်ထားခြင်း။
+          <p className="text-xs text-ink-600 leading-relaxed">
+            Apply for verified seller status to showcase and sell authentic handcrafted goods directly to buyers.
           </p>
         </div>
 
@@ -624,7 +624,7 @@ export default function SellerApplicationPage() {
               {/* Proposed Store Name */}
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-ink-700 block">
-                  Proposed Store Name / ဆိုင်အမည် <span className="text-red-500">*</span>
+                  Proposed Store Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -642,7 +642,7 @@ export default function SellerApplicationPage() {
               {/* Business Classification */}
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-ink-700 block">
-                  Business Classification / လုပ်ငန်းအမျိုးအစား <span className="text-red-500">*</span>
+                  Business Classification <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <select
@@ -663,7 +663,7 @@ export default function SellerApplicationPage() {
               {/* Contact Phone */}
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-ink-700 block">
-                  Primary Contact Phone / ဆက်သွယ်ရန်ဖုန်း <span className="text-red-500">*</span>
+                  Primary Contact Phone <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input

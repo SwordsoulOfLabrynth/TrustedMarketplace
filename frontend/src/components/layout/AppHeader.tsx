@@ -33,8 +33,8 @@ export function AppHeader() {
             <span className="font-bold text-xs sm:text-sm tracking-tight text-ink-900 block leading-tight truncate">
               TrustedMarketplace
             </span>
-            <span className="text-[9px] sm:text-[10px] text-jade-800 font-medium myanmar-text block leading-tight truncate">
-              ယုံကြည်စိတ်ချရသော ဈေးကွက်
+            <span className="text-[9px] sm:text-[10px] text-jade-800 font-medium block leading-tight truncate">
+              Verified Artisan Crafts
             </span>
           </div>
         </Link>

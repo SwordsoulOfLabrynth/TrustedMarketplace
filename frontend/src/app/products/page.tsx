@@ -166,7 +166,7 @@ function ProductCatalogContent() {
               <span className="text-ink-800 font-medium">Catalog</span>
             </nav>
             <h1 className="text-lg sm:text-xl font-bold text-ink-900 tracking-tight">
-              Artisan Catalog · ပစ္စည်းများ
+              Artisan Catalog
             </h1>
           </div>
 
@@ -182,7 +182,7 @@ function ProductCatalogContent() {
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search in English or မြန်မာ — e.g. marionette, ယွန်းထည်, lotus silk..."
+              placeholder="Search crafts, materials, or artisans — e.g. marionette, lacquerware, lotus silk..."
               className="w-full pl-9 pr-8 py-2.5 text-xs rounded-xl border border-stone-300 bg-white text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-jade-600/20 focus:border-jade-700 transition-all shadow-2xs font-medium"
             />
             <Search className="w-4 h-4 text-ink-400 absolute left-3 top-3 pointer-events-none" />
@@ -225,11 +225,11 @@ function ProductCatalogContent() {
             <span>Try:</span>
           </span>
           {[
-            { label: "ရုပ်သေး (Puppets)", q: "ရုပ်သေး" },
-            { label: "ယွန်းထည် (Lacquer)", q: "ယွန်းထည်" },
-            { label: "ကြာပိုး (Lotus Silk)", q: "ကြာပိုး" },
-            { label: "ကျွန်းသစ် (Teak)", q: "ကျွန်းသစ်" },
-            { label: "လက်ဖက် (Tea)", q: "လက်ဖက်" },
+            { label: "Puppets (Marionettes)", q: "Puppets" },
+            { label: "Lacquerware", q: "Lacquerware" },
+            { label: "Lotus Silk", q: "Lotus Silk" },
+            { label: "Teakwood", q: "Teakwood" },
+            { label: "Tea", q: "Tea" },
           ].map(({ label, q }) => (
             <button
               key={q}
@@ -406,8 +406,8 @@ function ProductCatalogContent() {
               <h3 className="font-bold text-sm text-ink-900">
                 No matching products found
               </h3>
-              <p className="text-xs text-ink-500 mt-0.5 myanmar-text">
-                ရှာဖွေမှုနှင့် ကိုက်ညီသော ပစ္စည်းမတွေ့ရှိပါ။
+              <p className="text-xs text-ink-500 mt-0.5">
+                Try adjusting your keywords, category, or price range filters.
               </p>
             </div>
             {hasActiveFilters && (

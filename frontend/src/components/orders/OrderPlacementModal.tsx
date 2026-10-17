@@ -93,8 +93,8 @@ export function OrderPlacementModal({
             <h2 className="text-sm font-bold text-ink-900">
               Confirm Non-Custodial Order
             </h2>
-            <span className="text-[11px] text-jade-700 font-medium myanmar-text block">
-              တိုက်ရိုက်အရောင်းအဝယ် စာရင်းသွင်းခြင်း
+            <span className="text-[11px] text-jade-700 font-medium block">
+              Direct Artisan Settlement
             </span>
           </div>
           <button
@@ -247,8 +247,8 @@ export function OrderPlacementModal({
               <Info className="w-3.5 h-3.5 text-amber-700 shrink-0" />
               <span>Direct Settlement &amp; Payment Agreement</span>
             </div>
-            <p className="myanmar-text">
-              TrustedMarketplace သည် ကြားခံငွေထိန်းသိမ်းခြင်း မပြုလုပ်ပါ။ အော်ဒါတင်ပြီးနောက် အတည်ပြုပြီးသား ရောင်းသူမှ သင်၏ဖုန်းနံပါတ်သို့ ဆက်သွယ်၍ ငွေပေးချေမှု (KBZPay / WavePay / COD) နှင့် ပို့ဆောင်မှုကို တိုက်ရိုက်ညှိနှိုင်းဆောင်ရွက်ပေးပါမည်။
+            <p className="leading-relaxed">
+              TrustedMarketplace operates non-custodially and does not hold funds. After you place this order, the verified artisan will contact your phone number to coordinate direct payment (KBZPay, WavePay, or Cash on Delivery) and fulfillment details.
             </p>
           </div>
         </div>

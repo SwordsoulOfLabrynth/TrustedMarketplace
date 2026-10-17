@@ -244,8 +244,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
               <h1 className="text-lg font-bold text-ink-900">
                 Sign In to View Order
               </h1>
-              <p className="text-xs text-ink-500 mt-1 myanmar-text">
-                ဤအော်ဒါအသေးစိတ်ကို ကြည့်ရှုရန် သက်ဆိုင်ရာအကောင့်ဖြင့် ဝင်ရောက်ပါ။
+              <p className="text-xs text-ink-500 mt-1">
+                Sign in with the relevant buyer or seller account to view this order.
               </p>
             </div>
             <Link
@@ -270,8 +270,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             <h1 className="text-base font-bold text-ink-900">
               Order Not Accessible
             </h1>
-            <p className="text-xs text-ink-500 mt-1 myanmar-text">
-              {errorMessage || "အော်ဒါအချက်အလက်ကို ရှာမတွေ့ပါ သို့မဟုတ် ကြည့်ရှုခွင့်မရှိပါ။"}
+            <p className="text-xs text-ink-500 mt-1">
+              {errorMessage || "Order not found or you do not have permission to view it."}
             </p>
           </div>
           <Link
@@ -365,8 +365,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             <Info className="w-3.5 h-3.5 text-amber-700 shrink-0" />
             <span>Non-Custodial Direct Settlement</span>
           </div>
-          <p className="text-[11px] leading-relaxed myanmar-text">
-            TrustedMarketplace သည် ငွေပေးချေမှုကို ကြားခံထိန်းသိမ်းခြင်းမပြုပါ။ ရောင်းသူနှင့် ဝယ်သူ တိုက်ရိုက်ဖုန်းဆက်သွယ်၍ ငွေလွှဲခြင်း (KBZPay / WavePay) သို့မဟုတ် ပစ္စည်းရောက်မှ ငွေချေစနစ်ဖြင့် ဆောင်ရွက်ပါသည်။
+          <p className="text-[11px] leading-relaxed">
+            TrustedMarketplace operates on a non-custodial model and does not hold payments in escrow. Buyers and sellers coordinate direct payment (KBZPay, WavePay, or Cash on Delivery) and fulfillment directly via phone.
           </p>
         </div>
 
@@ -471,8 +471,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                   </span>
                 )}
               </div>
-              <p className="text-[10px] text-jade-800 leading-tight myanmar-text">
-                KBZPay / WavePay ဖြင့် တိုက်ရိုက်ငွေလွှဲရန် သို့မဟုတ် ပစ္စည်းအကြောင်း မေးမြန်းရန် အထက်ပါဖုန်းသို့ တိုက်ရိုက် ဆက်သွယ်နိုင်ပါသည်။
+              <p className="text-[10px] text-jade-800 leading-tight">
+                Call or message the artisan directly using the number above to arrange payment (KBZPay / WavePay) or ask order questions.
               </p>
             </div>
           )}
@@ -531,7 +531,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                     ) : (
                       <Check className="w-4 h-4" />
                     )}
-                    <span>Accept Order · အော်ဒါလက်ခံမည်</span>
+                    <span>Accept Order</span>
                   </button>
                 )}
 
@@ -543,7 +543,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                     className="w-full py-2.5 px-4 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors disabled:opacity-60 cursor-pointer"
                   >
                     <Truck className="w-4 h-4" />
-                    <span>Dispatch / Mark Shipped · ပစ္စည်းပို့ဆောင်မည်</span>
+                    <span>Dispatch / Mark Shipped</span>
                   </button>
                 )}
 
@@ -572,8 +572,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                     <h2 className="text-xs font-bold text-emerald-900">
                       Confirm Delivery Received
                     </h2>
-                    <p className="text-[11px] text-ink-600 myanmar-text leading-tight mt-0.5">
-                      ပစ္စည်းလက်ခံရရှိပါက အတည်ပြုနိုင်ပါသည်။ အတည်ပြုပြီးပါက အရောင်းအဝယ် ပြီးမြောက်ပါမည်။
+                    <p className="text-[11px] text-ink-600 leading-tight mt-0.5">
+                      Confirm here once you have safely received the package. This completes the direct order.
                     </p>
                   </div>
 
@@ -588,7 +588,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                     ) : (
                       <CheckCircle2 className="w-4 h-4" />
                     )}
-                    <span>Confirm Delivery Received · ပစ္စည်းလက်ခံရရှိပါပြီ</span>
+                    <span>Confirm Delivery Received</span>
                   </button>
                 </div>
               )}

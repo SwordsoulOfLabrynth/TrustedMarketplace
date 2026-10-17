@@ -108,8 +108,8 @@ export default function SellerProfilePage({ params }: SellerProfilePageProps) {
             <h1 className="text-base font-bold text-ink-900">
               Artisan Workshop Not Found
             </h1>
-            <p className="text-xs text-ink-500 mt-1 myanmar-text">
-              ရှာဖွေနေသော ရောင်းသူဆိုင်ခွဲကို ရှာမတွေ့ပါ သို့မဟုတ် အတည်ပြုထားခြင်း မရှိသေးပါ။
+            <p className="text-xs text-ink-500 mt-1">
+              The requested artisan workshop could not be found or has not been verified yet.
             </p>
           </div>
           <Link

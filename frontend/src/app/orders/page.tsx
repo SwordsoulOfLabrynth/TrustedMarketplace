@@ -106,8 +106,8 @@ function OrdersListContent() {
             <h1 className="text-lg font-bold text-ink-900">
               Sign In to View Orders
             </h1>
-            <p className="text-xs text-ink-500 mt-1 myanmar-text">
-              အော်ဒါမှတ်တမ်းများနှင့် တိုက်ရိုက်ဆက်သွယ်မှုများကို ကြည့်ရှုရန် အကောင့်ဝင်ရောက်ပါ။
+            <p className="text-xs text-ink-500 mt-1">
+              Sign in to view your order history and direct transaction coordination.
             </p>
           </div>
           <Link
@@ -136,7 +136,7 @@ function OrdersListContent() {
         <div className="flex items-center justify-between border-b border-stone-200/80 pb-3">
           <div>
             <h1 className="text-lg sm:text-xl font-bold text-ink-900 tracking-tight">
-              Order Hub · အော်ဒါမှတ်တမ်းများ
+              Order Hub
             </h1>
             <p className="text-xs text-ink-500 mt-0.5">
               Direct transaction coordination and delivery tracking
@@ -317,10 +317,10 @@ function OrdersListContent() {
                   ? "No incoming store orders yet"
                   : "No purchase orders yet"}
               </h3>
-              <p className="text-xs text-ink-500 mt-0.5 myanmar-text">
+              <p className="text-xs text-ink-500 mt-0.5">
                 {activeTab === "seller"
-                  ? "သင့်ဆိုင်ခွဲအတွက် အော်ဒါအသစ်မရှိသေးပါ။"
-                  : "သင်ဝယ်ယူထားသော အော်ဒါမှတ်တမ်း မရှိသေးပါ။"}
+                  ? "No customer orders have been placed for your store yet."
+                  : "You haven't placed any orders yet. Discover items from local artisans."}
               </p>
             </div>
             {activeTab === "buyer" && (

@@ -86,7 +86,7 @@ export default function Home() {
           <div className="px-3 py-2 rounded-xl bg-jade-50/80 border border-jade-200/60 flex items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-2 min-w-0">
               <span className="font-semibold text-ink-900 truncate">
-                မင်္ဂလာပါ၊ {user.displayName}
+                Welcome, {user.displayName}
               </span>
               <span className="text-[10px] text-jade-800 font-medium px-1.5 py-0.2 rounded bg-white/80 border border-jade-200 shrink-0">
                 {isAdmin ? "Admin" : isSeller ? "Artisan Seller" : "Verified Buyer"}
@@ -128,8 +128,8 @@ export default function Home() {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900 leading-snug">
               Direct from Myanmar Artisans
             </h1>
-            <p className="text-xs text-ink-500 myanmar-text leading-relaxed">
-              အတည်ပြုလက်မှတ်ရ လက်မှုပညာရှင်များထံမှ ကြားခံမလို တိုက်ရိုက်စိတ်ချစွာ ဝယ်ယူနိုင်ပါသည်။
+            <p className="text-xs text-ink-500 leading-relaxed">
+              Direct, non-custodial marketplace connecting buyers with verified authentic Myanmar craft artisans.
             </p>
           </div>
 
@@ -140,7 +140,7 @@ export default function Home() {
                 type="text"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder="Search in English or မြန်မာ — e.g. puppet, ယွန်းထည်, lotus silk..."
+                placeholder="Search crafts, materials, or artisans — e.g. marionette, lacquerware, lotus silk..."
                 className="w-full pl-9 pr-20 py-2 rounded-xl bg-white border border-stone-300 text-ink-900 text-xs sm:text-sm placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-jade-600/20 focus:border-jade-700 transition-all font-medium shadow-2xs"
               />
               <Search className="w-4 h-4 text-ink-400 absolute left-3 pointer-events-none" />
@@ -153,17 +153,17 @@ export default function Home() {
             </div>
           </form>
 
-          {/* Quick Bilingual Craft Filter Chips */}
+          {/* Quick Craft Filter Chips */}
           <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-ink-500">
             <span className="font-medium text-ink-600 flex items-center gap-1">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-jade-600" />
               <span>Semantic Search:</span>
             </span>
             {[
-              { label: "ရုပ်သေး (Puppets)", q: "ရုပ်သေး" },
-              { label: "ယွန်းထည် (Lacquerware)", q: "ယွန်းထည်" },
-              { label: "ကြာပိုးထည် (Lotus Silk)", q: "ကြာပိုးထည်" },
-              { label: "ကျွန်းသစ် (Teakwood)", q: "ကျွန်းသစ်" },
+              { label: "Puppets (Marionettes)", q: "Puppets" },
+              { label: "Lacquerware", q: "Lacquerware" },
+              { label: "Lotus Silk", q: "Lotus Silk" },
+              { label: "Teakwood", q: "Teakwood" },
             ].map(({ label, q }) => (
               <button
                 key={q}
@@ -262,8 +262,8 @@ export default function Home() {
               <span className="font-bold text-xs text-ink-900 group-hover:text-jade-800 block">
                 All Collections
               </span>
-              <span className="text-[10px] text-ink-500 myanmar-text block">
-                ပစ္စည်းအားလုံး ရှာဖွေရန်
+              <span className="text-[10px] text-ink-500 block">
+                Browse all products
               </span>
             </Link>
 
