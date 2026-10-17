@@ -37,9 +37,14 @@ public class PublicCredentialsController : ControllerBase
     [HttpGet("{credentialId}/badge.svg")]
     [Produces("image/svg+xml")]
     [ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any)]
-    public async Task<IActionResult> GetBadgeSvg(string credentialId, CancellationToken ct)
+    public async Task<IActionResult> GetBadgeSvg(string credentialId, [FromQuery] bool download = false, CancellationToken ct = default)
     {
         var svg = await _credentialService.GenerateBadgeSvgAsync(credentialId, ct);
+        if (download)
+        {
+            var bytes = Encoding.UTF8.GetBytes(svg);
+            return File(bytes, "image/svg+xml", $"MatchGuard-Badge-{credentialId}.svg");
+        }
         return Content(svg, "image/svg+xml", Encoding.UTF8);
     }
 
@@ -50,9 +55,13 @@ public class PublicCredentialsController : ControllerBase
     [HttpGet("{credentialId}/badge.png")]
     [Produces("image/png")]
     [ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any)]
-    public async Task<IActionResult> GetBadgePng(string credentialId, CancellationToken ct)
+    public async Task<IActionResult> GetBadgePng(string credentialId, [FromQuery] bool download = false, CancellationToken ct = default)
     {
         var pngBytes = await _credentialService.GenerateBadgePngAsync(credentialId, ct);
+        if (download)
+        {
+            return File(pngBytes, "image/png", $"MatchGuard-Badge-{credentialId}.png");
+        }
         return File(pngBytes, "image/png");
     }
 }

@@ -99,6 +99,25 @@ public class CredentialService : ICredentialService
             .OrderByDescending(c => c.IssuedAtUtc)
             .ToListAsync(ct);
 
+        // Auto-heal: If seller is approved by admin, has an active account, but no credential exists yet, issue initial credential.
+        if (!credentials.Any())
+        {
+            var adminId = approvedApp.ReviewedByUserId ?? sellerUserId;
+            var newCredDto = await IssueCredentialAsync(
+                sellerUserId,
+                adminId,
+                "Auto-issued official credential for approved verified seller.",
+                Guid.NewGuid().ToString("N"),
+                ct);
+
+            return new SellerCredentialStatusDto(
+                IsEligible: true,
+                IneligibilityReason: null,
+                ActiveCredential: newCredDto,
+                History: new[] { newCredDto }
+            );
+        }
+
         var storeName = store?.StoreName ?? approvedApp.ProposedStoreName;
         var displayName = user.DisplayName;
         var frontendUrl = GetFrontendBaseUrl();
@@ -355,25 +374,52 @@ public class CredentialService : ICredentialService
         var user = await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == credential.SellerUserId, ct);
         var store = await _dbContext.SellerProfiles.AsNoTracking().FirstOrDefaultAsync(s => s.SellerUserId == credential.SellerUserId, ct);
 
+        var isAccountActive = user != null && user.AccountStatus == AccountStatus.Active;
+        var effectiveStatus = (!isAccountActive && credential.Status == CredentialStatus.Active)
+            ? CredentialStatus.Revoked
+            : credential.Status;
+
         return BadgeGenerator.GenerateSvgBadge(
             credential.PublicCredentialId,
             user?.DisplayName ?? "Artisan Seller",
             store?.StoreName ?? "Artisan Store",
-            credential.Status,
+            effectiveStatus,
             publicUrl);
     }
 
-    public Task<byte[]> GenerateBadgePngAsync(string publicCredentialId, CancellationToken ct = default)
+    public async Task<byte[]> GenerateBadgePngAsync(string publicCredentialId, CancellationToken ct = default)
     {
         var cleanId = publicCredentialId.Trim().ToUpperInvariant();
+        var credential = await _dbContext.SellerCredentials
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.PublicCredentialId == cleanId, ct);
+
         var publicUrl = $"{GetFrontendBaseUrl()}/verify/{cleanId}";
 
-        return Task.FromResult(BadgeGenerator.GeneratePngBadge(
-            cleanId,
-            "Artisan Seller",
-            "Artisan Store",
-            CredentialStatus.Active,
-            publicUrl));
+        if (credential == null)
+        {
+            return BadgeGenerator.GeneratePngBadge(
+                cleanId,
+                "Unverified",
+                "Unregistered",
+                CredentialStatus.Revoked,
+                publicUrl);
+        }
+
+        var user = await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == credential.SellerUserId, ct);
+        var store = await _dbContext.SellerProfiles.AsNoTracking().FirstOrDefaultAsync(s => s.SellerUserId == credential.SellerUserId, ct);
+
+        var isAccountActive = user != null && user.AccountStatus == AccountStatus.Active;
+        var effectiveStatus = (!isAccountActive && credential.Status == CredentialStatus.Active)
+            ? CredentialStatus.Revoked
+            : credential.Status;
+
+        return BadgeGenerator.GeneratePngBadge(
+            credential.PublicCredentialId,
+            user?.DisplayName ?? "Artisan Seller",
+            store?.StoreName ?? "Artisan Store",
+            effectiveStatus,
+            publicUrl);
     }
 
     public async Task<IReadOnlyList<SellerCredentialDto>> GetCredentialsForAdminAsync(
