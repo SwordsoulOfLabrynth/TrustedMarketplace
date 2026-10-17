@@ -3,7 +3,7 @@
  * Tests against the live running ASP.NET Core backend at http://localhost:5248
  */
 
-const API_BASE = "http://localhost:5248/api/v1";
+const API_BASE = process.env.API_BASE || "http://localhost:5248/api/v1";
 
 let passedTests = 0;
 let totalTests = 0;
