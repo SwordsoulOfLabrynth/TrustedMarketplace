@@ -30,7 +30,14 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
             var interceptor = sp.GetRequiredService<AuditableEntitySaveChangesInterceptor>();
-            options.UseNpgsql(connectionString)
+            options.UseNpgsql(connectionString, npgsqlOptions =>
+                   {
+                       npgsqlOptions.CommandTimeout(90);
+                       npgsqlOptions.EnableRetryOnFailure(
+                           maxRetryCount: 5,
+                           maxRetryDelay: TimeSpan.FromSeconds(10),
+                           errorCodesToAdd: null);
+                   })
                    .AddInterceptors(interceptor);
         });
 
@@ -62,7 +69,10 @@ public static class DependencyInjection
                 Database = database,
                 Username = username,
                 Password = password,
-                SslMode = Npgsql.SslMode.Require
+                SslMode = Npgsql.SslMode.Require,
+                Timeout = 90,
+                CommandTimeout = 90,
+                KeepAlive = 30
             };
 
             return builder.ConnectionString;

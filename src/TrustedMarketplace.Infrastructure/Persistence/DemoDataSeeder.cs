@@ -164,6 +164,12 @@ public static class DemoDataSeeder
                 45000m,
                 ProductCondition.New,
                 "MMK");
+            sampleProduct1.AddImage(
+                "products/seed/mandalay-teak-marionette.jpg",
+                sortOrder: 0,
+                originalFileName: "mandalay-teak-marionette.jpg",
+                mimeType: "image/jpeg",
+                fileSizeBytes: 859434);
             sampleProduct1.Publish();
             dbContext.Products.Add(sampleProduct1);
 
@@ -176,6 +182,12 @@ public static class DemoDataSeeder
                 28000m,
                 ProductCondition.New,
                 "MMK");
+            sampleProduct2.AddImage(
+                "products/seed/bagan-lacquerware-bowl.jpg",
+                sortOrder: 0,
+                originalFileName: "bagan-lacquerware-bowl.jpg",
+                mimeType: "image/jpeg",
+                fileSizeBytes: 812791);
             sampleProduct2.Publish();
             dbContext.Products.Add(sampleProduct2);
 
@@ -188,16 +200,56 @@ public static class DemoDataSeeder
                 65000m,
                 ProductCondition.New,
                 "MMK");
+            sampleProduct3.AddImage(
+                "products/seed/inle-lotus-silk-scarf.jpg",
+                sortOrder: 0,
+                originalFileName: "inle-lotus-silk-scarf.jpg",
+                mimeType: "image/jpeg",
+                fileSizeBytes: 914578);
             sampleProduct3.Publish();
             dbContext.Products.Add(sampleProduct3);
 
             await dbContext.SaveChangesAsync();
-            logger.LogInformation("Demo Catalog Products seeded (3 published products).");
+            logger.LogInformation("Demo Catalog Products seeded (3 published products with showcase photography).");
         }
         else
         {
             sampleProduct1 = await dbContext.Products
                 .FirstOrDefaultAsync(p => p.SellerUserId == sellerUser.Id);
+
+            var existingProducts = await dbContext.Products
+                .Include(p => p.Images)
+                .Where(p => p.SellerUserId == sellerUser.Id)
+                .ToListAsync();
+
+            var anyUpdated = false;
+            foreach (var p in existingProducts)
+            {
+                if (p.Images.Count == 0)
+                {
+                    if (p.Title.Contains("Marionette", StringComparison.OrdinalIgnoreCase))
+                    {
+                        p.AddImage("products/seed/mandalay-teak-marionette.jpg", 0, "mandalay-teak-marionette.jpg", "image/jpeg", 859434);
+                        anyUpdated = true;
+                    }
+                    else if (p.Title.Contains("Lacquerware", StringComparison.OrdinalIgnoreCase))
+                    {
+                        p.AddImage("products/seed/bagan-lacquerware-bowl.jpg", 0, "bagan-lacquerware-bowl.jpg", "image/jpeg", 812791);
+                        anyUpdated = true;
+                    }
+                    else if (p.Title.Contains("Lotus", StringComparison.OrdinalIgnoreCase) || p.Title.Contains("Silk", StringComparison.OrdinalIgnoreCase))
+                    {
+                        p.AddImage("products/seed/inle-lotus-silk-scarf.jpg", 0, "inle-lotus-silk-scarf.jpg", "image/jpeg", 914578);
+                        anyUpdated = true;
+                    }
+                }
+            }
+
+            if (anyUpdated)
+            {
+                await dbContext.SaveChangesAsync();
+                logger.LogInformation("Attached missing showcase photography to existing demo products.");
+            }
         }
 
         // 8. Seed Buyer user

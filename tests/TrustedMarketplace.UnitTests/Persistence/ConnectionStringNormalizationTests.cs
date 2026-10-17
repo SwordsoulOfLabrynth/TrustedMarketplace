@@ -33,6 +33,9 @@ public class ConnectionStringNormalizationTests
         Assert.Contains("Password=mypassword", result);
         Assert.Contains("Port=5432", result);
         Assert.Contains("SSL Mode=Require", result);
+        Assert.Contains("Timeout=90", result);
+        Assert.Contains("Command Timeout=90", result);
+        Assert.Contains("Keepalive=30", result);
         Assert.DoesNotContain("postgresql://", result);
     }
 

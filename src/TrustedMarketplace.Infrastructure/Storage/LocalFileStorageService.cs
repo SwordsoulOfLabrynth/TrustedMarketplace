@@ -30,6 +30,8 @@ public class LocalFileStorageService : IFileStorageService
         {
             Directory.CreateDirectory(_productImageStorageRoot);
         }
+
+        EnsureSeedAssetsCopied();
     }
 
     public async Task<string> SavePrivateFileAsync(
@@ -183,13 +185,113 @@ public class LocalFileStorageService : IFileStorageService
             return Task.FromResult<Stream?>(null);
         }
 
-        if (!File.Exists(fullPath))
+        if (File.Exists(fullPath))
         {
-            return Task.FromResult<Stream?>(null);
+            Stream stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return Task.FromResult<Stream?>(stream);
         }
 
-        Stream stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        return Task.FromResult<Stream?>(stream);
+        // Fallback: check if the file exists in bundled seed assets (e.g. after container restart)
+        var fileName = Path.GetFileName(normalizedKey);
+        var candidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "Assets", "SeedImages", fileName),
+            Path.Combine(Directory.GetCurrentDirectory(), "Assets", "SeedImages", fileName),
+            Path.Combine(Directory.GetCurrentDirectory(), "..", "TrustedMarketplace.Infrastructure", "Assets", "SeedImages", fileName)
+        };
+
+        foreach (var candidate in candidates)
+        {
+            if (File.Exists(candidate))
+            {
+                try
+                {
+                    var targetDir = Path.GetDirectoryName(fullPath);
+                    if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
+                    {
+                        Directory.CreateDirectory(targetDir);
+                    }
+                    File.Copy(candidate, fullPath, overwrite: true);
+                    _logger.LogInformation("Restored missing product image {StorageKey} from bundled seed assets.", storageKey);
+                    Stream restoredStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    return Task.FromResult<Stream?>(restoredStream);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to cache seed asset to disk; serving directly from bundled path: {Path}", candidate);
+                    Stream directStream = new FileStream(candidate, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    return Task.FromResult<Stream?>(directStream);
+                }
+            }
+        }
+
+        return Task.FromResult<Stream?>(null);
+    }
+
+    private void EnsureSeedAssetsCopied()
+    {
+        try
+        {
+            var candidates = new[]
+            {
+                Path.Combine(AppContext.BaseDirectory, "Assets", "SeedImages"),
+                Path.Combine(Directory.GetCurrentDirectory(), "Assets", "SeedImages"),
+                Path.Combine(Directory.GetCurrentDirectory(), "..", "TrustedMarketplace.Infrastructure", "Assets", "SeedImages"),
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "src", "TrustedMarketplace.Infrastructure", "Assets", "SeedImages")
+            };
+
+            string? seedDir = null;
+            foreach (var candidate in candidates)
+            {
+                if (Directory.Exists(candidate))
+                {
+                    seedDir = Path.GetFullPath(candidate);
+                    break;
+                }
+            }
+
+            if (seedDir == null)
+            {
+                return;
+            }
+
+            var files = Directory.GetFiles(seedDir);
+            var seedDestDir = Path.Combine(_productImageStorageRoot, "products", "seed");
+            if (!Directory.Exists(seedDestDir))
+            {
+                Directory.CreateDirectory(seedDestDir);
+            }
+
+            foreach (var file in files)
+            {
+                var fileName = Path.GetFileName(file);
+                var seedDest = Path.Combine(seedDestDir, fileName);
+                if (!File.Exists(seedDest))
+                {
+                    File.Copy(file, seedDest, overwrite: false);
+                }
+
+                // If this is a guid-keyed image (e.g. production keys), also ensure it exists in products/2026/10
+                var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+                if (nameWithoutExt.Length == 32 || string.Equals(fileName, "98a37d9b0f4049e4be163005afaa697c.jpg", StringComparison.OrdinalIgnoreCase))
+                {
+                    var prod2026Dir = Path.Combine(_productImageStorageRoot, "products", "2026", "10");
+                    if (!Directory.Exists(prod2026Dir))
+                    {
+                        Directory.CreateDirectory(prod2026Dir);
+                    }
+                    var prod2026Dest = Path.Combine(prod2026Dir, fileName);
+                    if (!File.Exists(prod2026Dest))
+                    {
+                        File.Copy(file, prod2026Dest, overwrite: false);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to copy seed assets into product image storage root.");
+        }
     }
 
     public Task DeleteProductImageAsync(string storageKey, CancellationToken ct = default)
