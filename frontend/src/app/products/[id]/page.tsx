@@ -131,6 +131,11 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
 
   const formattedPrice = new Intl.NumberFormat("en-US").format(product.priceAmount);
   const isOwnProduct = user?.id.toLowerCase() === product.sellerUserId.toLowerCase();
+  const verificationStatus =
+    product.sellerVerificationStatus ||
+    trustProfile?.verificationStatus ||
+    store?.verificationStatus ||
+    "Unverified";
 
   const handleOrderClick = () => {
     if (!isAuthenticated) {
@@ -277,16 +282,30 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
 
             <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] text-ink-500 px-1">
               <span className="flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-jade-700 shrink-0" />
-                <span>Handcrafted in Myanmar · Verified Workshop</span>
+                {verificationStatus === "Verified" ? (
+                  <>
+                    <ShieldCheck className="w-3.5 h-3.5 text-jade-700 shrink-0" />
+                    <span className="text-jade-800 font-medium">Verified Seller Identity</span>
+                  </>
+                ) : verificationStatus === "PendingReverification" ? (
+                  <>
+                    <Clock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                    <span className="text-amber-800 font-medium">Verification Pending</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="w-3.5 h-3.5 text-stone-500 shrink-0" />
+                    <span className="text-stone-600 font-medium">Unverified Seller</span>
+                  </>
+                )}
               </span>
               <span className="font-mono text-ink-700 font-medium">Condition: {product.condition}</span>
             </div>
           </div>
 
-          {/* Right Column: Title, Maker, Price, Order Action & Description */}
+          {/* Right Column: Title, Seller, Price, Order Action & Description */}
           <div className="lg:col-span-6 space-y-5">
-            {/* Title & Artisan Provenance */}
+            {/* Title & Seller Information */}
             <div className="space-y-2 border-b border-stone-200/80 pb-4">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-stone-100 text-stone-700 border border-stone-200">
@@ -299,14 +318,16 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                 {product.title}
               </h1>
 
-              {/* Maker Byline */}
+              {/* Seller Byline */}
               <div className="flex items-center gap-2 pt-1 text-xs text-ink-600">
-                <span>Crafted by</span>
+                <span>Sold by</span>
                 <Link
                   href={`/sellers/${product.sellerUserId}`}
                   className="font-bold text-jade-800 hover:underline flex items-center gap-1"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 text-jade-600" />
+                  {verificationStatus === "Verified" && (
+                    <ShieldCheck className="w-3.5 h-3.5 text-jade-600" />
+                  )}
                   <span>{product.storeName}</span>
                 </Link>
                 {store?.cityOrTownship && (
@@ -329,13 +350,13 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
               {isOwnProduct ? (
                 <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 text-ink-700 text-xs space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-ink-900">Your Workshop Listing</span>
+                    <span className="font-semibold text-ink-900">Your Product Listing</span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-stone-200 text-ink-800 uppercase tracking-wider">
                       {product.status}
                     </span>
                   </div>
                   <p className="text-[11px] text-ink-500 leading-relaxed">
-                    Self-ordering is disabled for your own store. You can manage this listing, update details, or upload genuine workshop photography.
+                    Self-ordering is disabled for your own store. You can manage this listing, update details, or upload genuine product photography.
                   </p>
                   <Link
                     href={`/seller/products/${product.id}/edit`}
@@ -352,20 +373,20 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                   className="w-full py-3.5 px-5 rounded-2xl bg-jade-800 hover:bg-jade-900 text-white font-bold text-sm tracking-wide shadow-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <ShoppingBag className="w-4 h-4" />
-                  <span>{isAuthenticated ? "Order Directly from Artisan" : "Sign In to Place Order"}</span>
+                  <span>{isAuthenticated ? "Place Order with Seller" : "Sign In to Place Order"}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               )}
 
               <p className="text-[11px] text-ink-500 text-center leading-relaxed">
-                Direct non-custodial transaction: After placing your order, the artisan will contact you to coordinate KBZPay, WavePay, or Cash on Delivery.
+                Direct non-custodial transaction: After placing your order, the seller will contact you to coordinate KBZPay, WavePay, or Cash on Delivery.
               </p>
             </div>
 
             {/* Description */}
             <div className="border-t border-stone-200/80 pt-4 space-y-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-ink-600">
-                Artisan Piece Details
+                Product Details
               </h2>
               <p className="text-xs sm:text-sm text-ink-800 leading-relaxed whitespace-pre-line myanmar-text">
                 {product.description}
@@ -376,12 +397,12 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
               </div>
             </div>
 
-            {/* Artisan Workshop Dossier Card */}
+            {/* Seller Trust Dossier Card */}
             <div className="p-4 rounded-2xl bg-white border border-stone-200/90 shadow-2xs space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-jade-700 block">
-                    Verified Maker Workshop
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500 block">
+                    Seller Trust Profile
                   </span>
                   <h3 className="text-sm font-bold text-ink-900 flex items-center gap-1.5 mt-0.5">
                     <Store className="w-4 h-4 text-jade-700 shrink-0" />
@@ -389,10 +410,22 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                   </h3>
                 </div>
 
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-jade-50 text-jade-800 border border-jade-200 flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3 text-jade-600" />
-                  Verified
-                </span>
+                {verificationStatus === "Verified" ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-jade-50 text-jade-800 border border-jade-200 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-jade-600" />
+                    Identity Verified
+                  </span>
+                ) : verificationStatus === "PendingReverification" ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-amber-600" />
+                    Verification Pending
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-stone-100 text-stone-600 border border-stone-200 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 text-stone-500" />
+                    Unverified
+                  </span>
+                )}
               </div>
 
               {store && (
@@ -418,6 +451,14 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                   <span>{trustProfile.completedOrdersCount} fulfilled orders</span>
                 </div>
               )}
+
+              {/* Trust & Non-Custodial Disclaimer */}
+              <div className="pt-2 border-t border-stone-100 text-[11px] text-ink-500 leading-relaxed bg-stone-50/70 p-2.5 rounded-xl border border-stone-200/50">
+                <span className="font-semibold text-ink-700 block mb-0.5">Trust Transparency</span>
+                <span>
+                  {trustProfile?.disclaimer || "Identity verification confirms seller identity documentation at approval; it is not a guarantee of product quality or transaction safety."}
+                </span>
+              </div>
 
               <Link
                 href={`/sellers/${product.sellerUserId}`}
