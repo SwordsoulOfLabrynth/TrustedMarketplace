@@ -17,6 +17,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { ApiException } from "@/lib/api-client";
 import { MobileViewportContainer } from "@/components/layout/MobileViewportContainer";
 import { AppHeader } from "@/components/layout/AppHeader";
 
@@ -65,6 +66,7 @@ export default function RegisterPage() {
       return;
     }
 
+    if (isSubmitting) return;
     setIsSubmitting(true);
 
     try {
@@ -72,10 +74,22 @@ export default function RegisterPage() {
       // Successful registration auto-logs in and routes to homepage
       router.push("/");
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : "Registration failed. An account with this email may already exist.";
+      let msg = "Registration failed. Please check your details and try again.";
+      if (err instanceof ApiException) {
+        if (err.status === 409) {
+          msg = "An account with this email address is already registered. Please sign in or use a different email.";
+        } else if (err.problem?.detail) {
+          msg = err.problem.detail;
+        } else if (err.message && !err.message.includes("status 409")) {
+          msg = err.message;
+        } else {
+          msg = "An account with this email address is already registered. Please sign in or use a different email.";
+        }
+      } else if (err instanceof Error) {
+        msg = err.message.includes("409")
+          ? "An account with this email address is already registered. Please sign in or use a different email."
+          : err.message;
+      }
       setErrorMessage(msg);
     } finally {
       setIsSubmitting(false);
@@ -112,11 +126,22 @@ export default function RegisterPage() {
 
         {/* Error Alert */}
         {errorMessage && (
-          <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-xs flex items-start gap-2.5 shadow-2xs">
-            <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <strong className="block font-semibold">Registration Notice</strong>
-              <span>{errorMessage}</span>
+          <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5 shadow-2xs">
+            <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-1">
+              <strong className="block font-semibold text-amber-950">Registration Notice</strong>
+              <p className="leading-relaxed text-amber-900">{errorMessage}</p>
+              {(errorMessage.includes("already registered") || errorMessage.includes("already exist")) && (
+                <div className="pt-1">
+                  <Link
+                    href="/auth/login"
+                    className="inline-flex items-center gap-1 font-bold text-jade-800 hover:text-jade-900 underline underline-offset-2"
+                  >
+                    <span>Click here to sign in with this email</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -180,16 +180,30 @@ class ApiClient {
     }
 
     let responseBody: unknown;
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
+    const contentType = response.headers.get("content-type") || "";
+    const isJson = contentType.includes("json");
+
+    if (isJson) {
       try {
         responseBody = await response.json();
       } catch {
-        responseBody = null;
+        try {
+          responseBody = await response.text();
+        } catch {
+          responseBody = null;
+        }
       }
     } else {
       try {
-        responseBody = await response.text();
+        const text = await response.text();
+        responseBody = text;
+        if (text && text.trim().startsWith("{")) {
+          try {
+            responseBody = JSON.parse(text);
+          } catch {
+            // Retain raw string
+          }
+        }
       } catch {
         responseBody = null;
       }
@@ -202,6 +216,20 @@ class ApiClient {
       if (responseBody && typeof responseBody === "object") {
         problem = responseBody as ProblemDetails;
         message = problem.detail || problem.title || message;
+      } else if (typeof responseBody === "string" && responseBody.trim().startsWith("{")) {
+        try {
+          const parsed = JSON.parse(responseBody);
+          if (parsed && typeof parsed === "object") {
+            problem = parsed as ProblemDetails;
+            message = problem.detail || problem.title || message;
+          }
+        } catch {
+          // Retain default
+        }
+      }
+
+      if (response.status === 409 && message.startsWith("API request failed")) {
+        message = "An account with this email address already exists. Please sign in or use a different email.";
       }
 
       throw new ApiException(response.status, message, problem);
