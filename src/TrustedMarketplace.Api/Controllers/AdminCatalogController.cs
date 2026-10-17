@@ -69,4 +69,30 @@ public class AdminCatalogController : ControllerBase
             message = $"Successfully processed {indexedCount} product embeddings."
         });
     }
+
+    /// <summary>
+    /// Safely and idempotently seeds the sample catalog products and distinct demo sellers (Admin only).
+    /// Strictly idempotent: never overwrites or wipes existing products or sellers.
+    /// </summary>
+    [HttpPost("seed-demo-data")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SeedDemoData(CancellationToken ct = default)
+    {
+        _logger.LogInformation("Admin requested idempotent demo catalog seeding.");
+        await DemoDataSeeder.SeedDemoDataAsync(
+            HttpContext.RequestServices,
+            HttpContext.RequestServices.GetRequiredService<IConfiguration>(),
+            _logger,
+            isDevelopment: true,
+            force: true);
+
+        await _catalogService.EnsureProductEmbeddingsAsync(ct);
+
+        var totalProducts = await _dbContext.Products.CountAsync(ct);
+        return Ok(new
+        {
+            message = "Idempotent demo catalog seed executed successfully.",
+            totalProducts
+        });
+    }
 }

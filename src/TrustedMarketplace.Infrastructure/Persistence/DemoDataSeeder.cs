@@ -26,15 +26,16 @@ public static class DemoDataSeeder
         IServiceProvider serviceProvider,
         IConfiguration configuration,
         ILogger logger,
-        bool isDevelopment)
+        bool isDevelopment,
+        bool force = false)
     {
-        if (!isDevelopment)
+        if (!isDevelopment && !force)
         {
             logger.LogInformation("Skipping DemoDataSeeder: Non-development environment detected.");
             return;
         }
 
-        var isEnabled = configuration.GetValue<bool>("DemoSeed:Enabled", false);
+        var isEnabled = force || configuration.GetValue<bool>("DemoSeed:Enabled", false);
         if (!isEnabled)
         {
             logger.LogInformation("DemoDataSeeder is disabled by configuration ('DemoSeed:Enabled' is false).");
@@ -457,7 +458,7 @@ public static class DemoDataSeeder
         if (app == null)
         {
             app = new SellerApplication(user.Id, storeName, businessType, phone);
-            app.Approve(adminUser.Id, "Business registry and identity credentials verified.");
+            app.Approve(adminUser?.Id ?? user.Id, "Business registry and identity credentials verified.");
             dbContext.SellerApplications.Add(app);
             await dbContext.SaveChangesAsync();
         }
@@ -483,7 +484,7 @@ public static class DemoDataSeeder
                 SubscriptionPlanConfiguration.PremiumPlanId,
                 DateTime.UtcNow.AddDays(-30),
                 DateTime.UtcNow.AddMonths(11),
-                adminUser.Id);
+                adminUser?.Id ?? user.Id);
             dbContext.SellerSubscriptions.Add(sub);
             await dbContext.SaveChangesAsync();
         }
@@ -497,7 +498,7 @@ public static class DemoDataSeeder
                 cred = TrustedMarketplace.Domain.Credentials.SellerCredential.Issue(
                     user.Id,
                     app.Id,
-                    adminUser.Id,
+                    adminUser?.Id ?? user.Id,
                     credentialId,
                     TrustedMarketplace.Domain.Credentials.CredentialType.IdentityVerified);
                 dbContext.SellerCredentials.Add(cred);

@@ -113,22 +113,29 @@ app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+var forceSeed = app.Configuration.GetValue<bool>("DemoSeed:ForceSeed", false) ||
+                string.Equals(Environment.GetEnvironmentVariable("SEED_DEMO_DATA"), "true", StringComparison.OrdinalIgnoreCase);
+
+if (app.Environment.IsDevelopment() || forceSeed)
 {
-    app.MapOpenApi();
-    app.UseSwaggerUI(options =>
+    if (app.Environment.IsDevelopment())
     {
-        options.SwaggerEndpoint("/openapi/v1.json", "MatchGuard API v1");
-        options.RoutePrefix = "swagger";
-    });
-    app.MapScalarApiReference();
+        app.MapOpenApi();
+        app.UseSwaggerUI(options =>
+        {
+            options.SwaggerEndpoint("/openapi/v1.json", "MatchGuard API v1");
+            options.RoutePrefix = "swagger";
+        });
+        app.MapScalarApiReference();
+    }
 
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
     await TrustedMarketplace.Infrastructure.Persistence.DemoDataSeeder.SeedDemoDataAsync(
         app.Services,
         app.Configuration,
         logger,
-        app.Environment.IsDevelopment());
+        app.Environment.IsDevelopment(),
+        force: forceSeed);
 
     using (var scope = app.Services.CreateScope())
     {
