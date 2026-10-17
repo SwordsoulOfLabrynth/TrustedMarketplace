@@ -442,6 +442,70 @@ namespace TrustedMarketplace.Infrastructure.Persistence.Migrations
                     b.ToTable("complaints", (string)null);
                 });
 
+            modelBuilder.Entity("TrustedMarketplace.Domain.Credentials.SellerCredential", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CredentialType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("IssuedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("IssuedByAdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PublicCredentialId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("RevocationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RevokedByAdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SellerApplicationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SellerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PublicCredentialId")
+                        .IsUnique();
+
+                    b.HasIndex("SellerApplicationId");
+
+                    b.HasIndex("SellerUserId", "CredentialType")
+                        .IsUnique()
+                        .HasDatabaseName("IX_seller_credentials_SellerUserId_CredentialType_Active")
+                        .HasFilter("\"Status\" = 'Active'");
+
+                    b.ToTable("seller_credentials", (string)null);
+                });
+
             modelBuilder.Entity("TrustedMarketplace.Domain.Orders.Order", b =>
                 {
                     b.Property<Guid>("Id")
@@ -877,7 +941,7 @@ namespace TrustedMarketplace.Infrastructure.Persistence.Migrations
                             IsActive = true,
                             MaxActiveListings = 100,
                             Name = "Premium",
-                            PriceAmount = 45000m,
+                            PriceAmount = 30000m,
                             UpdatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
                 });

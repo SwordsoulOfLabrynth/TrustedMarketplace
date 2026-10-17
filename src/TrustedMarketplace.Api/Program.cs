@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using Serilog;
 using TrustedMarketplace.Api.Authorization;
 using TrustedMarketplace.Api.Middleware;
 using TrustedMarketplace.Infrastructure;
+using TrustedMarketplace.Infrastructure.Persistence;
+using TrustedMarketplace.Infrastructure.Persistence.Configurations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -131,6 +134,46 @@ if (app.Environment.IsDevelopment())
     {
         var catalogService = scope.ServiceProvider.GetRequiredService<TrustedMarketplace.Application.Catalog.ICatalogService>();
         await catalogService.EnsureProductEmbeddingsAsync();
+    }
+}
+
+// Database initialization: apply pending migrations in production and synchronize canonical subscription plans
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    using var initScope = app.Services.CreateScope();
+    var initLogger = initScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var dbContext = initScope.ServiceProvider.GetService<AppDbContext>();
+
+    if (dbContext != null)
+    {
+        try
+        {
+            var canConnect = await dbContext.Database.CanConnectAsync();
+            if (canConnect)
+            {
+                if (app.Environment.IsProduction())
+                {
+                    initLogger.LogInformation("Applying pending database migrations in production...");
+                    await dbContext.Database.MigrateAsync();
+                }
+
+                var premiumPlan = await dbContext.SubscriptionPlans
+                    .FirstOrDefaultAsync(p => p.Id == SubscriptionPlanConfiguration.PremiumPlanId);
+
+                if (premiumPlan != null && premiumPlan.PriceAmount != 30000m)
+                {
+                    initLogger.LogInformation(
+                        "Updating canonical Premium subscription plan price from {OldPrice} to 30000 MMK in database",
+                        premiumPlan.PriceAmount);
+                    premiumPlan.UpdatePrice(30000m);
+                    await dbContext.SaveChangesAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            initLogger.LogError(ex, "Database startup initialization encountered an exception: {Message}", ex.Message);
+        }
     }
 }
 

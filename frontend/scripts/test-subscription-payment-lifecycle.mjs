@@ -47,7 +47,7 @@ async function runTests() {
 
   assert(freePlan && freePlan.priceAmount === 0 && freePlan.maxActiveListings === 10, "Free plan: 0 MMK, 10 listings");
   assert(standardPlan && standardPlan.priceAmount === 15000 && standardPlan.maxActiveListings === 30, "Standard plan: 15,000 MMK, 30 listings");
-  assert(premiumPlan && premiumPlan.priceAmount === 45000 && premiumPlan.maxActiveListings === 100, "Premium plan: 45,000 MMK, 100 listings");
+  assert(premiumPlan && premiumPlan.priceAmount === 30000 && premiumPlan.maxActiveListings === 100, "Premium plan: 30,000 MMK, 100 listings");
 
   // 2. Verify Platform Payment Channels
   console.log("\n--- 2. Platform Payment Channels ---");

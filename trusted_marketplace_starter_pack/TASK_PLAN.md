@@ -136,7 +136,7 @@
 - **Depends on:** T-10, Phase 2–4 Subscriptions
 - **Status:** **COMPLETED & VERIFIED**
 - **Acceptance Criteria:**
-  - `GET /subscription-plans` returns canonical tiers (Free: 10 listings / 0 MMK, Standard: 30 listings / 15,000 MMK, Premium: 100 listings / 45,000 MMK).
+  - `GET /subscription-plans` returns canonical tiers (Free: 10 listings / 0 MMK, Standard: 30 listings / 15,000 MMK, Premium: 100 listings / 30,000 MMK).
   - Seller submits payment reference via `POST /seller/subscription/subscribe` (KBZPay/WavePay); status set to `PendingVerification`.
   - Non-custodial integrity: Quota remains at Free tier (10 listings) while pending verification.
   - Concurrency & duplicate reference protection enforced with 409 Conflict.

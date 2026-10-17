@@ -68,7 +68,7 @@ async function main() {
 
   assert(freePlan && freePlan.priceAmount === 0 && freePlan.maxActiveListings === 10, "Free Plan: 0 MMK, 10 listings");
   assert(standardPlan && standardPlan.priceAmount === 15000 && standardPlan.maxActiveListings === 30, "Standard Plan: 15,000 MMK, 30 listings");
-  assert(premiumPlan && premiumPlan.priceAmount === 45000 && premiumPlan.maxActiveListings === 100, "Premium Plan: 45,000 MMK, 100 listings");
+  assert(premiumPlan && premiumPlan.priceAmount === 30000 && premiumPlan.maxActiveListings === 100, "Premium Plan: 30,000 MMK, 100 listings");
 
   const methodsRes = await request("/api/v1/platform/payment-methods");
   assert(methodsRes.status === 200, "GET /api/v1/platform/payment-methods returns HTTP 200");
@@ -298,7 +298,7 @@ async function main() {
   assert(sellerStatus.data.status === "Rejected", "Seller status endpoint reports 'Rejected'");
   assert(sellerStatus.data.rejectionReason === rejectionReason, "Seller can view administrator rejection reason");
 
-  // Seller submits corrected payment for Premium plan (3 months = 135,000 MMK)
+  // Seller submits corrected payment for Premium plan (3 months = 90,000 MMK)
   const validRef2 = `WAVE-${timestamp}-CORRECTED`;
   const recoverySub = await request("/api/v1/seller/subscription/subscribe", {
     method: "POST",
@@ -312,7 +312,7 @@ async function main() {
   });
   assert(recoverySub.status === 201, "Corrected payment submission succeeded (HTTP 201 Created)");
   assert(recoverySub.data.status === "PendingVerification", "New subscription is in 'PendingVerification' status");
-  assert(recoverySub.data.paymentAmount === 135000, "Payment amount recorded as 3 x 45,000 = 135,000 MMK");
+  assert(recoverySub.data.paymentAmount === 90000, "Payment amount recorded as 3 x 30,000 = 90,000 MMK");
   const sub2Id = recoverySub.data.id;
 
   // -------------------------------------------------------------------------

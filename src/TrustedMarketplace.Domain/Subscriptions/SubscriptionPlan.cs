@@ -30,4 +30,14 @@ public class SubscriptionPlan : BaseEntity
         BillingPeriod = billingPeriod.Trim();
         IsActive = isActive;
     }
+
+    public void UpdatePrice(decimal newPrice)
+    {
+        if (newPrice < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(newPrice), "Subscription plan price cannot be negative.");
+        }
+
+        PriceAmount = newPrice;
+    }
 }

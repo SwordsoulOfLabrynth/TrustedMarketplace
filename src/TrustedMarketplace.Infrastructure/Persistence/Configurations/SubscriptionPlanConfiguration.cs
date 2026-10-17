@@ -49,7 +49,7 @@ public class SubscriptionPlanConfiguration : IEntityTypeConfiguration<Subscripti
         builder.HasData(
             new SubscriptionPlan(FreePlanId, "Free", 10, 0m, "MMK", "Monthly", true) { CreatedAtUtc = now, UpdatedAtUtc = now },
             new SubscriptionPlan(StandardPlanId, "Standard", 30, 15000m, "MMK", "Monthly", true) { CreatedAtUtc = now, UpdatedAtUtc = now },
-            new SubscriptionPlan(PremiumPlanId, "Premium", 100, 45000m, "MMK", "Monthly", true) { CreatedAtUtc = now, UpdatedAtUtc = now }
+            new SubscriptionPlan(PremiumPlanId, "Premium", 100, 30000m, "MMK", "Monthly", true) { CreatedAtUtc = now, UpdatedAtUtc = now }
         );
     }
 }

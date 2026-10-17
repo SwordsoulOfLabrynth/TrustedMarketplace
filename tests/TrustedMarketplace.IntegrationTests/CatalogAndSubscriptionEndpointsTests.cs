@@ -89,9 +89,9 @@ public class CatalogAndSubscriptionEndpointsTests : IClassFixture<WebApplication
         var plans = await response.Content.ReadFromJsonAsync<List<SubscriptionPlanDto>>();
         Assert.NotNull(plans);
         Assert.True(plans.Count >= 3);
-        Assert.Contains(plans, p => p.Name == "Free" && p.MaxActiveListings == 10);
-        Assert.Contains(plans, p => p.Name == "Standard" && p.MaxActiveListings == 30);
-        Assert.Contains(plans, p => p.Name == "Premium" && p.MaxActiveListings == 100);
+        Assert.Contains(plans, p => p.Name == "Free" && p.MaxActiveListings == 10 && p.PriceAmount == 0m);
+        Assert.Contains(plans, p => p.Name == "Standard" && p.MaxActiveListings == 30 && p.PriceAmount == 15000m);
+        Assert.Contains(plans, p => p.Name == "Premium" && p.MaxActiveListings == 100 && p.PriceAmount == 30000m);
     }
 
     [Fact]
