@@ -27,6 +27,8 @@ export function SellerCertificateCard() {
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [copiedSnippet, setCopiedSnippet] = useState<boolean>(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
+  const [isDownloadingSvg, setIsDownloadingSvg] = useState<boolean>(false);
+  const [isDownloadingPng, setIsDownloadingPng] = useState<boolean>(false);
 
   const loadStatus = useCallback(async () => {
     setIsLoading(true);
@@ -68,7 +70,7 @@ export function SellerCertificateCard() {
 
   // Safe HTML embed snippet (escapes seller data and attributes)
   const embedSnippet = publicId
-    ? `<a href="${publicVerifyUrl}" target="_blank" rel="noopener noreferrer" title="MatchGuard Identity-Verified Seller">\n  <img src="${badgeSvgUrl}" alt="Identity Verified by MatchGuard" width="220" height="54" style="border:none;max-width:100%;" />\n</a>`
+    ? `<a href="${publicVerifyUrl}" target="_blank" rel="noopener noreferrer" title="MatchGuard Identity-Verified Seller">\n  <img src="${badgeSvgUrl}" alt="Identity Verified by MatchGuard" width="380" height="90" style="border:none;max-width:100%;" />\n</a>`
     : "";
 
   const handleCopyLink = async () => {
@@ -117,6 +119,33 @@ export function SellerCertificateCard() {
     }
   };
 
+  const handleDownloadBadge = async (format: "svg" | "png") => {
+    if (!publicId) return;
+    if (format === "svg") setIsDownloadingSvg(true);
+    else setIsDownloadingPng(true);
+
+    try {
+      const blob = await sellerCredentialsApi.downloadBadge(publicId, format);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `MatchGuard-Badge-${publicId}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(
+        err instanceof Error
+          ? err.message
+          : `Failed to download ${format.toUpperCase()} badge.`
+      );
+    } finally {
+      if (format === "svg") setIsDownloadingSvg(false);
+      else setIsDownloadingPng(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-3xl border border-stone-200/90 p-6 shadow-2xs flex items-center justify-center gap-3 text-ink-500 text-xs min-h-[140px]">
@@ -140,8 +169,8 @@ export function SellerCertificateCard() {
     );
   }
 
-  // Case 1: Ineligible Seller (no approved application or suspended)
-  if (!data?.isEligible && !activeCred) {
+  // Case 1: Ineligible Seller (no approved application or suspended account)
+  if (!data?.isEligible) {
     return (
       <div className="bg-white rounded-3xl border border-stone-200/90 shadow-2xs overflow-hidden">
         <div className="p-5 sm:p-6 space-y-4">
@@ -224,7 +253,49 @@ export function SellerCertificateCard() {
     );
   }
 
-  // Case 3: Active Eligible Credential
+  // Case 3: Eligible but credential issuance is pending or in progress
+  if (!activeCred) {
+    return (
+      <div className="bg-white rounded-3xl border border-stone-200/90 shadow-2xs overflow-hidden">
+        <div className="p-5 sm:p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-2xl bg-jade-50 text-jade-700 shrink-0 mt-0.5">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-ink-900 tracking-tight">
+                Identity-Verified Seller Credential
+              </h3>
+              <p className="text-xs text-ink-600 leading-relaxed">
+                Your identity verification has been approved! Your official credential certificate and portable badges are currently being activated.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-jade-50/80 border border-jade-200 text-jade-950 text-xs space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-semibold">
+                <Loader2 className="w-4 h-4 animate-spin text-jade-700 shrink-0" />
+                <span>Activation in Progress</span>
+              </div>
+              <button
+                type="button"
+                onClick={loadStatus}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-jade-800 hover:text-jade-900 underline underline-offset-2 cursor-pointer"
+              >
+                Refresh Status
+              </button>
+            </div>
+            <p className="leading-relaxed text-ink-600">
+              Platform services synchronize active credentials in real time. Click refresh to load your newly issued certificate and portable badges.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Case 4: Active Eligible Credential (activeCred and publicId guaranteed non-null)
   return (
     <div className="bg-white rounded-3xl border border-jade-200/90 shadow-2xs overflow-hidden">
       {/* Header Accent */}
@@ -246,7 +317,7 @@ export function SellerCertificateCard() {
               <p className="text-xs text-jade-200/90 leading-relaxed">
                 Credential ID:{" "}
                 <span className="font-mono text-white font-semibold tracking-wider">
-                  {activeCred?.publicCredentialId}
+                  {publicId}
                 </span>
               </p>
             </div>
@@ -255,7 +326,7 @@ export function SellerCertificateCard() {
           <div className="shrink-0 text-left sm:text-right">
             <span className="text-[11px] text-jade-300/90 block">Issued UTC</span>
             <span className="text-xs font-mono font-medium text-white">
-              {activeCred ? new Date(activeCred.issuedAtUtc).toISOString().replace("T", " ").slice(0, 19) + " UTC" : ""}
+              {new Date(activeCred.issuedAtUtc).toISOString().replace("T", " ").slice(0, 19) + " UTC"}
             </span>
           </div>
         </div>
@@ -321,43 +392,54 @@ export function SellerCertificateCard() {
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
-              <a
-                href={badgeSvgUrl}
-                download={`MatchGuard-Badge-${publicId}.svg`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-ink-800 text-xs font-semibold shadow-2xs transition-all"
+              <button
+                type="button"
+                onClick={() => handleDownloadBadge("svg")}
+                disabled={isDownloadingSvg}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-ink-800 text-xs font-semibold shadow-2xs transition-all disabled:opacity-60 cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5 text-jade-700" />
+                {isDownloadingSvg ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-jade-700" />
+                ) : (
+                  <Download className="w-3.5 h-3.5 text-jade-700" />
+                )}
                 <span>SVG Badge</span>
-              </a>
-              <a
-                href={badgePngUrl}
-                download={`MatchGuard-Badge-${publicId}.png`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-ink-800 text-xs font-semibold shadow-2xs transition-all"
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDownloadBadge("png")}
+                disabled={isDownloadingPng}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-ink-800 text-xs font-semibold shadow-2xs transition-all disabled:opacity-60 cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5 text-jade-700" />
+                {isDownloadingPng ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-jade-700" />
+                ) : (
+                  <Download className="w-3.5 h-3.5 text-jade-700" />
+                )}
                 <span>PNG Badge</span>
-              </a>
+              </button>
             </div>
           </div>
         </div>
 
         {/* Live Badge Preview */}
         <div className="p-4 rounded-2xl border border-jade-100 bg-jade-50/40 space-y-2">
-          <span className="text-[11px] font-bold text-jade-950 uppercase tracking-wider block">
-            Live Badge Preview
-          </span>
-          <div className="flex items-center justify-start p-3 bg-white rounded-xl border border-stone-200 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-jade-950 uppercase tracking-wider block">
+              Live Badge Preview
+            </span>
+            <span className="text-[10px] text-jade-800/80 font-mono">
+              Vector SVG
+            </span>
+          </div>
+          <div className="flex items-center justify-start p-3 bg-white rounded-xl border border-stone-200 shadow-2xs overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={badgeSvgUrl}
-              alt="MatchGuard Identity-Verified Seller Badge"
-              width={220}
-              height={54}
-              className="h-10 w-auto"
+              alt={`Identity Verified by MatchGuard - ${activeCred.sellerDisplayName || activeCred.storeName}`}
+              width={380}
+              height={90}
+              className="h-12 sm:h-14 w-auto max-w-full object-contain"
             />
           </div>
         </div>

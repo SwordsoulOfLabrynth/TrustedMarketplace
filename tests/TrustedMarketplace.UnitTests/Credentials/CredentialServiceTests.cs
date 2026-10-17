@@ -324,4 +324,57 @@ public class CredentialServiceTests : IDisposable
         Assert.Equal((byte)'N', pngBytes[2]);
         Assert.Equal((byte)'G', pngBytes[3]);
     }
+
+    [Fact]
+    public async Task GetMyCredentialStatus_ApprovedSellerWithoutPriorCredential_AutoHealsAndIssuesCredential()
+    {
+        // Seller approved by admin, but no credential was issued prior (e.g. migration or legacy approval)
+        var (seller, _, store, _) = await SeedApprovedSellerAsync();
+
+        var initialCount = await _dbContext.SellerCredentials.CountAsync(c => c.SellerUserId == seller.Id);
+        Assert.Equal(0, initialCount);
+
+        var status = await _credentialService.GetMyCredentialStatusAsync(seller.Id);
+
+        Assert.True(status.IsEligible);
+        Assert.Null(status.IneligibilityReason);
+        Assert.NotNull(status.ActiveCredential);
+        Assert.Equal("Active", status.ActiveCredential.Status);
+        Assert.StartsWith("MG-ID-", status.ActiveCredential.PublicCredentialId);
+        Assert.Equal(store.StoreName, status.ActiveCredential.StoreName);
+
+        var finalCount = await _dbContext.SellerCredentials.CountAsync(c => c.SellerUserId == seller.Id);
+        Assert.Equal(1, finalCount);
+    }
+
+    [Fact]
+    public async Task GenerateBadgePng_Revoked_ReturnsValidPngWithRevokedStatus()
+    {
+        var (seller, _, _, admin) = await SeedApprovedSellerAsync();
+        var issued = await _credentialService.IssueCredentialAsync(seller.Id, admin.Id, "Initial", "corr-14");
+        await _credentialService.RevokeCredentialAsync(issued.Id, admin.Id, "Audit failure", "corr-14-r");
+
+        var pngBytes = await _credentialService.GenerateBadgePngAsync(issued.PublicCredentialId);
+
+        Assert.NotNull(pngBytes);
+        Assert.True(pngBytes.Length > 100);
+        Assert.Equal(0x89, pngBytes[0]);
+        Assert.Equal((byte)'P', pngBytes[1]);
+    }
+
+    [Fact]
+    public async Task GenerateBadgeSvg_SuspendedAccount_RendersRevokedStatus()
+    {
+        var (seller, _, _, admin) = await SeedApprovedSellerAsync();
+        var issued = await _credentialService.IssueCredentialAsync(seller.Id, admin.Id, "Initial", "corr-15");
+
+        seller.Suspend();
+        await _dbContext.SaveChangesAsync();
+
+        var svg = await _credentialService.GenerateBadgeSvgAsync(issued.PublicCredentialId);
+
+        Assert.NotNull(svg);
+        Assert.Contains("REVOKED", svg);
+        Assert.DoesNotContain("ACTIVE VERIFIED", svg);
+    }
 }
