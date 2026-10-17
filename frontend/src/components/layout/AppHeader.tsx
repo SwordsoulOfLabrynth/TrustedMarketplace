@@ -24,17 +24,24 @@ export function AppHeader() {
         {/* Brand Logo & Name */}
         <Link
           href="/"
-          className="flex items-center gap-1.5 sm:gap-2 group transition-opacity hover:opacity-90 min-w-0 shrink"
+          className="flex items-center gap-2 group transition-opacity hover:opacity-95 min-w-0 shrink"
+          title="MatchGuard — Home"
         >
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-jade-800 flex items-center justify-center text-white shadow-xs transition-transform group-hover:scale-105 shrink-0">
-            <ShieldCheck className="w-4 h-4 text-jade-50" />
+          <div className="w-7 h-7 sm:w-8 sm:h-8 transition-transform group-hover:scale-105 shrink-0 flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/branding/matchguard-icon-192.png"
+              alt="MatchGuard Shield"
+              className="w-full h-full object-contain drop-shadow-2xs"
+            />
           </div>
-          <div className="truncate min-w-0">
-            <span className="font-bold text-xs sm:text-sm tracking-tight text-ink-900 block leading-tight truncate">
-              TrustedMarketplace
-            </span>
-            <span className="text-[9px] sm:text-[10px] text-jade-800 font-medium block leading-tight truncate">
-              Verified Artisan Crafts
+          <div className="truncate min-w-0 leading-none">
+            <div className="font-black text-xs sm:text-sm tracking-tight block leading-tight truncate">
+              <span className="text-[#133E2D]">Match</span>
+              <span className="text-[#B28544]">Guard</span>
+            </div>
+            <span className="text-[9px] sm:text-[10px] text-jade-800 font-semibold tracking-wider block leading-tight truncate uppercase">
+              Buy Safe &bull; Sell Confidently
             </span>
           </div>
         </Link>

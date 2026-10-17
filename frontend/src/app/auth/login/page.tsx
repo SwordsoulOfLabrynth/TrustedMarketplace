@@ -101,21 +101,26 @@ function LoginForm() {
       header={<AppHeader />}
       footer={
         <div className="px-4 py-3 text-center text-xs text-ink-500 font-medium">
-          <span>Non-Custodial Architecture · Trusted Marketplace Myanmar Pilot</span>
+          <span>Non-Custodial Architecture · MatchGuard Myanmar Pilot</span>
         </div>
       }
     >
       <div className="max-w-md mx-auto w-full py-6 sm:py-10 space-y-5">
         {/* Header Title */}
-        <div className="space-y-1 text-center">
-          <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-stone-100 text-jade-800 border border-stone-200 shadow-2xs mb-1">
-            <Lock className="w-5 h-5 text-jade-800" />
+        <div className="space-y-1.5 text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 mx-auto mb-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/branding/matchguard-icon-192.png"
+              alt="MatchGuard Shield"
+              className="w-full h-full object-contain drop-shadow-xs"
+            />
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900">
-            Sign In to TrustedMarketplace
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-ink-900">
+            Sign In to <span className="text-[#133E2D]">Match</span><span className="text-[#B28544]">Guard</span>
           </h1>
           <p className="text-xs text-ink-500 leading-relaxed">
-            Access your verified artisan and buyer account securely
+            Buy Safe &bull; Sell Confidently with verified Myanmar artisans
           </p>
         </div>
 
@@ -152,7 +157,7 @@ function LoginForm() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@trustedmarketplace.local"
+                  placeholder="name@example.com"
                   className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-stone-300 bg-white text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-jade-600/20 focus:border-jade-700 transition-all font-medium"
                 />
               </div>

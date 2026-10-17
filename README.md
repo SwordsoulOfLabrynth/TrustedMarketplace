@@ -1,7 +1,16 @@
-# Trusted Marketplace (Phase 1 MVP)
+# MatchGuard (formerly Trusted Marketplace)
 
-> **Backend Web API** for the **Trusted Marketplace** platform — a trust-first e-commerce system built for the Myanmar market pilot.  
-> Implemented in **C# 13** on **.NET 10** (`net10.0`) as a **Modular Monolith** with **ASP.NET Core**, **Entity Framework Core**, and **PostgreSQL**.
+<p align="center">
+  <img src="frontend/public/images/branding/matchguard-logo.svg" alt="MatchGuard Logo" width="220" />
+</p>
+
+<p align="center">
+  <strong>Buy Safe &bull; Sell Confidently</strong><br />
+  A non-custodial, verified-seller marketplace platform built for Myanmar social commerce.
+</p>
+
+> **Backend Web API & Frontend Application** for **MatchGuard** — a trust-first e-commerce system built for the Myanmar market pilot.  
+> Implemented in **C# 13** on **.NET 10** (`net10.0`) as a **Modular Monolith** with **ASP.NET Core**, **Entity Framework Core**, **PostgreSQL**, and a modern **Next.js** frontend.
 
 ---
 
@@ -26,10 +35,10 @@
 
 ## 1. Project Overview
 
-### What is Trusted Marketplace?
+### What is MatchGuard?
 In Southeast Asian social-commerce and informal e-commerce markets, fraud, non-delivery, and account spoofing are widespread. Traditional platforms attempt to solve this using escrow (holding customer money), which creates high banking integration hurdles and regulatory compliance overhead.
 
-**Trusted Marketplace** provides an alternative **non-custodial** marketplace model:
+**MatchGuard** provides an alternative **non-custodial** marketplace model:
 - **Zero Platform Custody**: The platform coordinates transactions and tracks deliveries but **never holds buyer funds or runs an in-app wallet**.
 - **Verified Seller Identity**: Sellers submit National Registration Card (NRC) credentials and business proofs that admins inspect and verify. Documents are stored privately outside the web root.
 - **Transaction-Linked Reviews**: Only verified buyers of successfully delivered orders can submit a review, and strictly at most one review per completed order.
@@ -586,9 +595,9 @@ All errors are returned with `Content-Type: application/problem+json`:
 ## 9. Authentication Lifecycle & Token Rotation
 
 ```text
- Client (Browser / App)                             Trusted Marketplace API
-        │                                                     │
-        │ 1. POST /auth/register                              │
+ Client (Browser / App)                                       MatchGuard API
+        │                                                           │
+        │ 1. POST /auth/register                                    │
         ├────────────────────────────────────────────────────>│ -> Creates User (Role=Buyer, Status=Active)
         │<────────────────────────────────────────────────────┤    Returns 201 Created
         │                                                     │

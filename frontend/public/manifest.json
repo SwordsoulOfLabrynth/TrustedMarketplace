@@ -1,0 +1,27 @@
+{
+  "name": "MatchGuard — Verified Artisan Marketplace",
+  "short_name": "MatchGuard",
+  "description": "Non-custodial, verified-seller marketplace connecting buyers with authentic Myanmar craft artisans.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FBF9F5",
+  "theme_color": "#133E2D",
+  "icons": [
+    {
+      "src": "/images/branding/matchguard-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/branding/matchguard-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/branding/matchguard-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

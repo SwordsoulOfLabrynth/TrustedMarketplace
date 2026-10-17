@@ -295,7 +295,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
       header={<AppHeader />}
       footer={
         <div className="px-4 py-3 text-center text-xs text-ink-500 font-medium">
-          <span>Non-Custodial Architecture · Trusted Marketplace Myanmar</span>
+          <span>Non-Custodial Architecture · MatchGuard Myanmar</span>
         </div>
       }
     >
@@ -366,7 +366,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             <span>Non-Custodial Direct Settlement</span>
           </div>
           <p className="text-[11px] leading-relaxed">
-            TrustedMarketplace operates on a non-custodial model and does not hold payments in escrow. Buyers and sellers coordinate direct payment (KBZPay, WavePay, or Cash on Delivery) and fulfillment directly via phone.
+            MatchGuard operates on a non-custodial model and does not hold payments in escrow. Buyers and sellers coordinate direct payment (KBZPay, WavePay, or Cash on Delivery) and fulfillment directly via phone.
           </p>
         </div>
 

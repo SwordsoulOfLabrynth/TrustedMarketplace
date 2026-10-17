@@ -150,7 +150,7 @@ function ProductCatalogContent() {
       header={<AppHeader />}
       footer={
         <div className="px-4 py-3 text-center text-xs text-ink-500 font-medium">
-          <span>Non-Custodial Architecture · Trusted Marketplace Myanmar</span>
+          <span>Non-Custodial Architecture · MatchGuard Myanmar</span>
         </div>
       }
     >

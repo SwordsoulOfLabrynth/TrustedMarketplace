@@ -115,7 +115,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseSwaggerUI(options =>
     {
-        options.SwaggerEndpoint("/openapi/v1.json", "TrustedMarketplace API v1");
+        options.SwaggerEndpoint("/openapi/v1.json", "MatchGuard API v1");
         options.RoutePrefix = "swagger";
     });
     app.MapScalarApiReference();

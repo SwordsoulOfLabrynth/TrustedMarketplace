@@ -550,7 +550,7 @@ export default function AdminDashboardPage() {
       header={<AppHeader />}
       footer={
         <div className="px-4 py-3 text-center text-xs text-ink-500 font-medium">
-          <span>TrustedMarketplace Governance Console · Administrative Audit Mode</span>
+          <span>MatchGuard Governance Console · Administrative Audit Mode</span>
         </div>
       }
     >

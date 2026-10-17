@@ -87,21 +87,26 @@ export default function RegisterPage() {
       header={<AppHeader />}
       footer={
         <div className="px-4 py-3 text-center text-xs text-ink-500 font-medium">
-          <span>Non-Custodial Architecture · Trusted Marketplace Myanmar Pilot</span>
+          <span>Non-Custodial Architecture · MatchGuard Myanmar Pilot</span>
         </div>
       }
     >
       <div className="max-w-md mx-auto w-full py-6 sm:py-10 space-y-5">
         {/* Header Title */}
-        <div className="space-y-1 text-center">
-          <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-stone-100 text-jade-800 border border-stone-200 shadow-2xs mb-1">
-            <UserPlus className="w-5 h-5 text-jade-800" />
+        <div className="space-y-1.5 text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 mx-auto mb-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/branding/matchguard-icon-192.png"
+              alt="MatchGuard Shield"
+              className="w-full h-full object-contain drop-shadow-xs"
+            />
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900">
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-ink-900">
             Create Buyer Account
           </h1>
           <p className="text-xs text-ink-500 leading-relaxed">
-            Join TrustedMarketplace to discover and order authentic handcrafted goods directly from verified artisans
+            Join <span className="font-bold text-[#133E2D]">Match</span><span className="font-bold text-[#B28544]">Guard</span> to discover and order authentic handcrafted goods directly from verified artisans
           </p>
         </div>
 

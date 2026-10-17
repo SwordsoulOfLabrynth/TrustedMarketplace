@@ -33,7 +33,7 @@ const frontendSrc = fs.existsSync(path.join(process.cwd(), "src"))
 const files = walk(frontendSrc);
 
 console.log("==================================================================");
-console.log("  TrustedMarketplace — English-Only UI Invariant Test Suite        ");
+console.log("  MatchGuard — English-Only UI Invariant Test Suite               ");
 console.log("==================================================================\n");
 
 let violations = 0;

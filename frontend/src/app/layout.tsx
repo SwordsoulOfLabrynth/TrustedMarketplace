@@ -17,9 +17,42 @@ const notoSansMyanmar = Noto_Sans_Myanmar({
 });
 
 export const metadata: Metadata = {
-  title: "TrustedMarketplace — Trust-First E-Commerce",
+  metadataBase: new URL("https://trusted-marketplace.vercel.app"),
+  title: {
+    default: "MatchGuard — Buy Safe • Sell Confidently",
+    template: "%s | MatchGuard",
+  },
   description:
-    "A non-custodial, verified-seller marketplace designed to eliminate scams in Myanmar social commerce.",
+    "A non-custodial, verified-seller marketplace designed to eliminate scams in Myanmar social commerce. Buy Safe • Sell Confidently.",
+  applicationName: "MatchGuard",
+  keywords: ["MatchGuard", "Myanmar artisans", "handicrafts", "verified sellers", "safe commerce", "non-custodial"],
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/images/branding/matchguard-icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  manifest: "/site.webmanifest",
+  openGraph: {
+    title: "MatchGuard — Buy Safe • Sell Confidently",
+    description: "Verified Myanmar artisan marketplace with direct, scam-free commerce.",
+    url: "https://trusted-marketplace.vercel.app",
+    siteName: "MatchGuard",
+    images: [
+      {
+        url: "/images/branding/matchguard-full-cream.png",
+        width: 1024,
+        height: 1024,
+        alt: "MatchGuard — Buy Safe • Sell Confidently",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
 };
 
 export const viewport: Viewport = {
@@ -28,7 +61,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#FBF9F5",
+  themeColor: "#133E2D",
 };
 
 export default function RootLayout({

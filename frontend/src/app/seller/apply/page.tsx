@@ -291,7 +291,7 @@ export default function SellerApplicationPage() {
       header={<AppHeader />}
       footer={
         <div className="px-4 py-3 text-center text-xs text-ink-500 font-medium">
-          <span>TrustedMarketplace Myanmar · Secure Human-Verified Artisan Onboarding</span>
+          <span>MatchGuard Myanmar · Secure Human-Verified Artisan Onboarding</span>
         </div>
       }
     >
@@ -583,7 +583,7 @@ export default function SellerApplicationPage() {
                     Human-Verified Myanmar Heritage Marketplace
                   </h2>
                   <p className="text-xs text-ink-700 leading-relaxed">
-                    TrustedMarketplace requires all sellers to undergo human administrative identity verification before publishing products. This preserves buyer confidence and protects authentic artisans.
+                    MatchGuard requires all sellers to undergo human administrative identity verification before publishing products. This preserves buyer confidence and protects authentic artisans.
                   </p>
                 </div>
               </div>

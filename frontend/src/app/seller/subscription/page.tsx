@@ -212,7 +212,7 @@ export default function SellerSubscriptionPage() {
       header={<AppHeader />}
       footer={
         <div className="px-4 py-3 text-center text-xs text-ink-500 font-medium">
-          <span>TrustedMarketplace · Myanmar Non-Custodial Artisan Commerce</span>
+          <span>MatchGuard · Myanmar Non-Custodial Artisan Commerce</span>
         </div>
       }
     >

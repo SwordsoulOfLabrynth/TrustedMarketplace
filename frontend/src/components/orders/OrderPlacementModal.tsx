@@ -248,7 +248,7 @@ export function OrderPlacementModal({
               <span>Direct Settlement &amp; Payment Agreement</span>
             </div>
             <p className="leading-relaxed">
-              TrustedMarketplace operates non-custodially and does not hold funds. After you place this order, the verified artisan will contact your phone number to coordinate direct payment (KBZPay, WavePay, or Cash on Delivery) and fulfillment details.
+              MatchGuard operates non-custodially and does not hold funds. After you place this order, the verified artisan will contact your phone number to coordinate direct payment (KBZPay, WavePay, or Cash on Delivery) and fulfillment details.
             </p>
           </div>
         </div>

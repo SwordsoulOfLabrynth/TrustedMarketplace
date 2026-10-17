@@ -391,11 +391,11 @@ public class SubscriptionService : ISubscriptionService
 
     public Task<IReadOnlyList<PlatformPaymentMethodDto>> GetPlatformPaymentMethodsAsync(CancellationToken ct = default)
     {
-        var kbzAccount = _configuration["PlatformPayments:KBZPay:AccountName"] ?? "TrustedMarketplace Operations";
+        var kbzAccount = _configuration["PlatformPayments:KBZPay:AccountName"] ?? "MatchGuard Operations";
         var kbzPhone = _configuration["PlatformPayments:KBZPay:AccountPhone"] ?? "09798881234";
         var kbzQr = _configuration["PlatformPayments:KBZPay:QrCodeUrl"] ?? "/images/payments/kbzpay-platform-qr.svg";
 
-        var waveAccount = _configuration["PlatformPayments:WavePay:AccountName"] ?? "TrustedMarketplace Operations";
+        var waveAccount = _configuration["PlatformPayments:WavePay:AccountName"] ?? "MatchGuard Operations";
         var wavePhone = _configuration["PlatformPayments:WavePay:AccountPhone"] ?? "09977889900";
         var waveQr = _configuration["PlatformPayments:WavePay:QrCodeUrl"] ?? "/images/payments/wavepay-platform-qr.svg";
 

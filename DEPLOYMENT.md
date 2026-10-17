@@ -1,4 +1,4 @@
-# TrustedMarketplace — Free Deployment Guide
+# MatchGuard (formerly TrustedMarketplace) — Free Deployment Guide
 
 **Stack**: Neon (PostgreSQL) → Render (ASP.NET Core API) → Vercel (Next.js)  
 **Cost**: \$0 — no credit card required for any of the three platforms.

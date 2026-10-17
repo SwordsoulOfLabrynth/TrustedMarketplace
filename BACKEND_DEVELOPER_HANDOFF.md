@@ -1,4 +1,4 @@
-# TrustedMarketplace — Backend Developer Handoff Guide
+# MatchGuard (formerly TrustedMarketplace) — Backend Developer Handoff Guide
 
 > **Target Audience**: Backend Engineers / C# .NET Developers  
 > **Repository**: `D:\Project\TrustedMarketplace`  
