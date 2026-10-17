@@ -32,6 +32,7 @@ import {
   Check,
   Store,
   MapPin,
+  Download,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { adminApi } from "@/lib/admin-api";
@@ -70,9 +71,12 @@ export default function AdminDashboardPage() {
   // Application Decision Modal State
   const [activeApp, setActiveApp] = useState<SellerApplicationDto | null>(null);
   const [decisionReason, setDecisionReason] = useState<string>("");
-  const [decisionAction, setDecisionAction] = useState<"Approved" | "Rejected" | null>(null);
+  const [decisionAction, setDecisionAction] = useState<
+    "Approved" | "Rejected" | "MoreInformationRequired" | null
+  >(null);
   const [isDecidingApp, setIsDecidingApp] = useState<boolean>(false);
   const [appDecisionFeedback, setAppDecisionFeedback] = useState<string | null>(null);
+  const [downloadingEvidenceId, setDownloadingEvidenceId] = useState<string | null>(null);
 
   // ==========================================
   // TAB 2: COMPLAINTS & DISPUTES QUEUE STATE
@@ -236,6 +240,25 @@ export default function AdminDashboardPage() {
   // ------------------------------------------
   // Handlers
   // ------------------------------------------
+  const handleDownloadEvidence = async (appId: string, evId: string, evidenceType: string) => {
+    try {
+      setDownloadingEvidenceId(evId);
+      const blob = await adminApi.downloadEvidence(appId, evId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${evidenceType.toLowerCase().replace(/\s+/g, "_")}_${evId.slice(0, 8)}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to download evidence");
+    } finally {
+      setDownloadingEvidenceId(null);
+    }
+  };
+
   const handleAppDecision = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeApp || !decisionAction) return;
@@ -260,6 +283,9 @@ export default function AdminDashboardPage() {
       setActiveApp(null);
       setDecisionReason("");
       setDecisionAction(null);
+      // Synchronize backend state and newly-created store profiles
+      fetchApplications();
+      fetchStores();
     } catch (err: unknown) {
       setAppDecisionFeedback(
         err instanceof Error ? err.message : "Failed to record administrative decision."
@@ -483,20 +509,48 @@ export default function AdminDashboardPage() {
   // ==========================================
   // Summary Counts
   // ==========================================
+  // Status Normalization Helpers
+  const isPendingApp = (status?: string | null) => {
+    if (!status) return false;
+    const s = status.toLowerCase();
+    return s === "pending" || s === "submitted" || s === "underreview";
+  };
+
+  const isApprovedApp = (status?: string | null) => {
+    if (!status) return false;
+    return status.toLowerCase() === "approved";
+  };
+
+  const isRejectedApp = (status?: string | null) => {
+    if (!status) return false;
+    return status.toLowerCase() === "rejected";
+  };
+
+  const isMoreInfoApp = (status?: string | null) => {
+    if (!status) return false;
+    return status.toLowerCase() === "moreinformationrequired";
+  };
+
   // Applications
   const totalAppsCount = applications.length;
-  const pendingAppsCount = applications.filter(
-    (a) => a.status === "Submitted" || a.status === "UnderReview"
-  ).length;
-  const approvedAppsCount = applications.filter((a) => a.status === "Approved").length;
+  const pendingAppsCount = applications.filter((a) => isPendingApp(a.status)).length;
+  const approvedAppsCount = applications.filter((a) => isApprovedApp(a.status)).length;
   const rejectedAppsCount = applications.filter(
-    (a) => a.status === "Rejected" || a.status === "MoreInformationRequired"
+    (a) => isRejectedApp(a.status) || isMoreInfoApp(a.status)
   ).length;
 
   const filteredApplications =
     selectedAppStatus === "All"
       ? applications
-      : applications.filter((a) => a.status.toLowerCase() === selectedAppStatus.toLowerCase());
+      : applications.filter((a) => {
+          if (selectedAppStatus.toLowerCase() === "pending") {
+            return isPendingApp(a.status);
+          }
+          if (selectedAppStatus.toLowerCase() === "moreinformationrequired") {
+            return isMoreInfoApp(a.status);
+          }
+          return a.status?.toLowerCase() === selectedAppStatus.toLowerCase();
+        });
 
   // Complaints
   const totalComplaintsCount = complaints.length;
@@ -720,20 +774,26 @@ export default function AdminDashboardPage() {
 
             {/* Filter Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-              {["All", "Submitted", "UnderReview", "Approved", "Rejected"].map((tab) => {
-                const isActive = selectedAppStatus.toLowerCase() === tab.toLowerCase();
+              {[
+                { key: "All", label: "All" },
+                { key: "Pending", label: "Pending Review" },
+                { key: "Approved", label: "Approved" },
+                { key: "Rejected", label: "Rejected" },
+                { key: "MoreInformationRequired", label: "More Info Required" },
+              ].map((tab) => {
+                const isActive = selectedAppStatus.toLowerCase() === tab.key.toLowerCase();
                 return (
                   <button
-                    key={tab}
+                    key={tab.key}
                     type="button"
-                    onClick={() => setSelectedAppStatus(tab)}
+                    onClick={() => setSelectedAppStatus(tab.key)}
                     className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer ${
                       isActive
                         ? "bg-jade-800 text-white shadow-2xs"
                         : "bg-white text-ink-600 hover:bg-stone-100 border border-stone-200"
                     }`}
                   >
-                    {tab === "UnderReview" ? "Under Review" : tab}
+                    {tab.label}
                   </button>
                 );
               })}
@@ -760,15 +820,22 @@ export default function AdminDashboardPage() {
                 <p className="text-[11px] text-ink-500">
                   {selectedAppStatus === "All"
                     ? "No seller verification submissions exist in the database yet."
-                    : `No applications with status "${selectedAppStatus}".`}
+                    : `No applications with status "${
+                        selectedAppStatus === "Pending"
+                          ? "Pending Review"
+                          : selectedAppStatus === "MoreInformationRequired"
+                          ? "More Info Required"
+                          : selectedAppStatus
+                      }".`}
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
                 {filteredApplications.map((app) => {
-                  const isPending = app.status === "Submitted" || app.status === "UnderReview";
-                  const isApproved = app.status === "Approved";
-                  const isRejected = app.status === "Rejected";
+                  const isPending = isPendingApp(app.status);
+                  const isApproved = isApprovedApp(app.status);
+                  const isRejected = isRejectedApp(app.status);
+                  const isMoreInfo = isMoreInfoApp(app.status);
 
                   return (
                     <div
@@ -788,13 +855,24 @@ export default function AdminDashboardPage() {
                             {isPending && (
                               <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
                                 <Clock className="w-3 h-3 text-amber-700" />
-                                <span>{app.status === "UnderReview" ? "Under Review" : "Submitted"}</span>
+                                <span>{app.status === "UnderReview" ? "Under Review" : "Pending Review"}</span>
                               </span>
                             )}
                             {isRejected && (
                               <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-800 border border-red-200">
                                 <XCircle className="w-3 h-3 text-red-700" />
                                 <span>Rejected</span>
+                              </span>
+                            )}
+                            {isMoreInfo && (
+                              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200">
+                                <AlertCircle className="w-3 h-3 text-purple-700" />
+                                <span>More Info Required</span>
+                              </span>
+                            )}
+                            {!isApproved && !isPending && !isRejected && !isMoreInfo && (
+                              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-stone-100 text-stone-700 border border-stone-200">
+                                <span>{app.status || "Unknown"}</span>
                               </span>
                             )}
                           </div>
@@ -814,7 +892,7 @@ export default function AdminDashboardPage() {
                           </div>
                         </div>
 
-                        {isPending && (
+                        {(isPending || isMoreInfo) && (
                           <div className="flex items-center gap-2 pt-2 sm:pt-0">
                             <button
                               type="button"
@@ -844,6 +922,20 @@ export default function AdminDashboardPage() {
                             >
                               Reject
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveApp(app);
+                                setDecisionAction("MoreInformationRequired");
+                                setDecisionReason(
+                                  "Additional physical workshop documentation or identity evidence is required."
+                                );
+                                setAppDecisionFeedback(null);
+                              }}
+                              className="px-3 py-1.5 rounded-xl bg-white border border-stone-300 hover:border-purple-400 hover:text-purple-700 text-ink-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                            >
+                              Request Info
+                            </button>
                           </div>
                         )}
                       </div>
@@ -857,20 +949,34 @@ export default function AdminDashboardPage() {
                       )}
 
                       {/* Evidence Files Summary */}
-                      {app.evidence && app.evidence.length > 0 && (
+                      {app.evidence && app.evidence.length > 0 ? (
                         <div className="pt-2 border-t border-stone-100 flex flex-wrap items-center gap-2 text-[11px] text-ink-600">
                           <span className="font-semibold text-ink-700">
                             Verification Evidence ({app.evidence.length}):
                           </span>
                           {app.evidence.map((ev: VerificationEvidenceDto) => (
-                            <span
+                            <button
                               key={ev.id}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-100 border border-stone-200 text-stone-700 text-[10px] font-mono"
+                              type="button"
+                              onClick={() => handleDownloadEvidence(app.id, ev.id, ev.evidenceType)}
+                              disabled={downloadingEvidenceId === ev.id}
+                              title="Click to securely stream and download evidence file"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 text-[10px] font-mono transition-colors cursor-pointer"
                             >
-                              <FileText className="w-3 h-3 text-stone-500" />
+                              {downloadingEvidenceId === ev.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin text-jade-700" />
+                              ) : (
+                                <FileText className="w-3 h-3 text-stone-500" />
+                              )}
                               <span>{ev.evidenceType}</span>
-                            </span>
+                              <Download className="w-2.5 h-2.5 text-stone-400 ml-0.5" />
+                            </button>
                           ))}
+                        </div>
+                      ) : (
+                        <div className="pt-2 border-t border-stone-100 text-[11px] text-stone-500 flex items-center gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          <span>No physical verification evidence or documentation uploaded.</span>
                         </div>
                       )}
                     </div>
@@ -1623,14 +1729,22 @@ export default function AdminDashboardPage() {
                     <div className="w-8 h-8 rounded-xl bg-jade-50 text-jade-800 flex items-center justify-center border border-jade-200">
                       <CheckCircle2 className="w-4 h-4 text-jade-700" />
                     </div>
-                  ) : (
+                  ) : decisionAction === "Rejected" ? (
                     <div className="w-8 h-8 rounded-xl bg-red-50 text-red-800 flex items-center justify-center border border-red-200">
                       <XCircle className="w-4 h-4 text-red-700" />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-800 flex items-center justify-center border border-purple-200">
+                      <AlertCircle className="w-4 h-4 text-purple-700" />
                     </div>
                   )}
                   <div>
                     <h3 className="text-sm font-bold text-ink-900">
-                      {decisionAction === "Approved" ? "Approve Artisan Workshop" : "Reject Application"}
+                      {decisionAction === "Approved"
+                        ? "Approve Artisan Workshop"
+                        : decisionAction === "Rejected"
+                        ? "Reject Application"
+                        : "Request More Information"}
                     </h3>
                     <p className="text-[11px] text-ink-500">{activeApp.proposedStoreName}</p>
                   </div>
@@ -1642,6 +1756,39 @@ export default function AdminDashboardPage() {
                 >
                   ✕
                 </button>
+              </div>
+
+              {/* Application Details Summary */}
+              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200/80 text-xs space-y-1.5">
+                <div className="flex justify-between text-ink-700">
+                  <span className="text-ink-500">Business Type:</span>
+                  <span className="font-semibold">{activeApp.businessType}</span>
+                </div>
+                <div className="flex justify-between text-ink-700">
+                  <span className="text-ink-500">Contact Phone:</span>
+                  <span className="font-semibold">{activeApp.contactPhone}</span>
+                </div>
+                <div className="flex justify-between text-ink-700">
+                  <span className="text-ink-500">Evidence Files:</span>
+                  <span className="font-semibold">{activeApp.evidence?.length || 0} attached</span>
+                </div>
+                {activeApp.evidence && activeApp.evidence.length > 0 && (
+                  <div className="pt-1.5 flex flex-wrap gap-1.5">
+                    {activeApp.evidence.map((ev: VerificationEvidenceDto) => (
+                      <button
+                        key={ev.id}
+                        type="button"
+                        onClick={() => handleDownloadEvidence(activeApp.id, ev.id, ev.evidenceType)}
+                        disabled={downloadingEvidenceId === ev.id}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-stone-200 text-stone-700 text-[10px] font-mono hover:bg-stone-100 transition-colors cursor-pointer"
+                      >
+                        <FileText className="w-3 h-3 text-stone-500" />
+                        <span>{ev.evidenceType}</span>
+                        <Download className="w-2.5 h-2.5 text-stone-400" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {appDecisionFeedback && (
@@ -1685,11 +1832,15 @@ export default function AdminDashboardPage() {
                     className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer ${
                       decisionAction === "Approved"
                         ? "bg-jade-800 hover:bg-jade-900"
-                        : "bg-red-600 hover:bg-red-700"
+                        : decisionAction === "Rejected"
+                        ? "bg-red-600 hover:bg-red-700"
+                        : "bg-purple-700 hover:bg-purple-800"
                     }`}
                   >
                     {isDecidingApp && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                    <span>Confirm {decisionAction}</span>
+                    <span>
+                      Confirm {decisionAction === "MoreInformationRequired" ? "Request" : decisionAction}
+                    </span>
                   </button>
                 </div>
               </form>

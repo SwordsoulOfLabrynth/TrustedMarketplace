@@ -271,7 +271,7 @@ export interface SellerApplicationDto {
   proposedStoreName: string;
   businessType: string;
   contactPhone: string;
-  status: "Draft" | "Submitted" | "UnderReview" | "Approved" | "Rejected" | "MoreInformationRequired" | string;
+  status: "Pending" | "Draft" | "Submitted" | "UnderReview" | "Approved" | "Rejected" | "MoreInformationRequired" | string;
   submittedAtUtc: string;
   reviewedAtUtc: string | null;
   decisionReason: string | null;

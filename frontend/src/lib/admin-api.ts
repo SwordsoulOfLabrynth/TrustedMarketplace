@@ -58,6 +58,26 @@ export const adminApi = {
   },
 
   /**
+   * Securely streams private verification evidence file (Admin only, audited under SEC-12).
+   */
+  async downloadEvidence(applicationId: string, evidenceId: string): Promise<Blob> {
+    const baseUrl = apiClient.getBaseUrl();
+    const token = apiClient.getAccessToken();
+    const response = await fetch(
+      `${baseUrl}/api/v1/admin/seller-applications/${applicationId}/evidence/${evidenceId}`,
+      {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      }
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to load evidence file (${response.status})`);
+    }
+    return await response.blob();
+  },
+
+  /**
    * Fetches all complaints/disputes across the platform for administrative review.
    */
   async getComplaints(page = 1, pageSize = 50): Promise<ComplaintDto[]> {
