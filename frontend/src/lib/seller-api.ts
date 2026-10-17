@@ -170,34 +170,21 @@ export const sellerCredentialsApi = {
    * Securely streams official PDF certificate for currently authenticated seller.
    */
   async downloadMyCertificate(): Promise<Blob> {
-    const baseUrl = apiClient.getBaseUrl();
-    const token = apiClient.getAccessToken();
-    const response = await fetch(`${baseUrl}/api/v1/seller/credentials/my/certificate`, {
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to download certificate (${response.status})`);
-    }
-    return await response.blob();
+    return await apiClient.requestBlob("/api/v1/seller/credentials/my/certificate");
   },
 
   /**
    * Securely streams official PDF certificate by credential ID.
    */
   async downloadCertificate(id: string): Promise<Blob> {
-    const baseUrl = apiClient.getBaseUrl();
-    const token = apiClient.getAccessToken();
-    const response = await fetch(`${baseUrl}/api/v1/seller/credentials/${id}/certificate`, {
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to download certificate (${response.status})`);
-    }
-    return await response.blob();
+    return await apiClient.requestBlob(`/api/v1/seller/credentials/${id}/certificate`);
+  },
+
+  /**
+   * Downloads official portable badge (SVG or PNG) as a Blob.
+   */
+  async downloadBadge(publicId: string, format: "svg" | "png"): Promise<Blob> {
+    return await apiClient.requestBlob(`/api/v1/public/credentials/${publicId}/badge.${format}?download=true`);
   },
 };
 

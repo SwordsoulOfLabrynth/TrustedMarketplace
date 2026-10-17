@@ -75,7 +75,7 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials()
-              .WithExposedHeaders("X-Correlation-ID");
+              .WithExposedHeaders("X-Correlation-ID", "Content-Disposition");
     });
 });
 

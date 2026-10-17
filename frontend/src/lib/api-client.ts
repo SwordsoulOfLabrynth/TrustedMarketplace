@@ -269,6 +269,62 @@ class ApiClient {
   public delete<T>(path: string, options?: RequestOptions): Promise<T> {
     return this.request<T>(path, { ...options, method: "DELETE" });
   }
+
+  public async requestBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
+    const url = path.startsWith("http")
+      ? path
+      : `${this.baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+
+    const headers = new Headers(options.headers || {});
+    const currentToken = this.getAccessToken();
+    if (currentToken && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${currentToken}`);
+    }
+
+    const fetchOptions: RequestInit = {
+      ...options,
+      headers,
+      credentials: options.credentials || "include",
+    };
+
+    let response: Response;
+    try {
+      response = await fetch(url, fetchOptions);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Network request failed";
+      throw new ApiException(0, `Network error: ${message}`);
+    }
+
+    if (response.status === 401 && !options._isRetry) {
+      const refreshedToken = await this.refreshAccessToken();
+      if (refreshedToken) {
+        return this.requestBlob(path, {
+          ...options,
+          _isRetry: true,
+          headers: {
+            ...options.headers,
+            Authorization: `Bearer ${refreshedToken}`,
+          },
+        });
+      }
+    }
+
+    if (!response.ok) {
+      let message = `API request failed with status ${response.status}`;
+      try {
+        const text = await response.text();
+        if (text) {
+          const parsed = JSON.parse(text);
+          message = parsed.detail || parsed.title || text;
+        }
+      } catch {
+        // ignore
+      }
+      throw new ApiException(response.status, message);
+    }
+
+    return await response.blob();
+  }
 }
 
 export const apiClient = new ApiClient();
