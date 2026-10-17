@@ -203,6 +203,7 @@ public static class DependencyInjection
         services.AddScoped<TrustedMarketplace.Application.Reviews.IReviewService, TrustedMarketplace.Infrastructure.Reviews.ReviewService>();
         services.AddScoped<TrustedMarketplace.Application.Complaints.IComplaintService, TrustedMarketplace.Infrastructure.Complaints.ComplaintService>();
         services.AddScoped<TrustedMarketplace.Application.Trust.ITrustService, TrustedMarketplace.Infrastructure.Trust.TrustService>();
+        services.AddScoped<TrustedMarketplace.Application.Credentials.ICredentialService, TrustedMarketplace.Infrastructure.Credentials.CredentialService>();
         return services;
     }
 }

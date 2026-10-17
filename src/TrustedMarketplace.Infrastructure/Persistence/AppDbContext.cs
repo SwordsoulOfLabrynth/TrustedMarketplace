@@ -28,6 +28,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<TrustedMarketplace.Domain.Orders.OrderStatusHistory> OrderStatusHistories => Set<TrustedMarketplace.Domain.Orders.OrderStatusHistory>();
     public DbSet<TrustedMarketplace.Domain.Reviews.Review> Reviews => Set<TrustedMarketplace.Domain.Reviews.Review>();
     public DbSet<TrustedMarketplace.Domain.Complaints.Complaint> Complaints => Set<TrustedMarketplace.Domain.Complaints.Complaint>();
+    public DbSet<TrustedMarketplace.Domain.Credentials.SellerCredential> SellerCredentials => Set<TrustedMarketplace.Domain.Credentials.SellerCredential>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

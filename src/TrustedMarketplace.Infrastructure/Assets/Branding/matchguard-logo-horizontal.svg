@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 72" fill="none">
+  <defs>
+    <linearGradient id="hShieldLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#184b37" />
+      <stop offset="100%" stop-color="#0e3223" />
+    </linearGradient>
+    <linearGradient id="hShieldRight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#23694f" />
+      <stop offset="100%" stop-color="#144330" />
+    </linearGradient>
+    <linearGradient id="hGoldHand" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c9974f" />
+      <stop offset="100%" stop-color="#a47535" />
+    </linearGradient>
+  </defs>
+
+  <!-- Left Icon Mark (scaled 64x64 at x=6, y=4) -->
+  <g transform="translate(4, 3) scale(0.13)">
+    <!-- Left Half of Shield -->
+    <path d="M256 50
+             C210 65 140 85 106 102
+             C100 135 96 220 118 290
+             C142 368 200 422 256 462
+             L256 50 Z"
+          fill="url(#hShieldLeft)" />
+
+    <!-- Right Half of Shield -->
+    <path d="M256 50
+             C302 65 372 85 406 102
+             C412 135 416 220 394 290
+             C370 368 312 422 256 462
+             L256 50 Z"
+          fill="url(#hShieldRight)" />
+
+    <!-- Bag Handle -->
+    <path d="M210 156
+             C210 130 230 110 256 110
+             C282 110 302 130 302 156
+             L302 170
+             L284 170
+             L284 156
+             C284 140 272 128 256 128
+             C240 128 228 140 228 156
+             L228 170
+             L210 170 Z"
+          fill="#FAF6ED" />
+
+    <!-- Bag Main Body -->
+    <path d="M192 168
+             C202 165 310 165 320 168
+             C326 170 348 200 354 260
+             C360 320 340 376 256 388
+             C172 376 152 320 158 260
+             C164 200 186 170 192 168 Z"
+          fill="#FAF6ED" />
+
+    <!-- Checkmark inside bag -->
+    <path d="M228 266
+             L250 288
+             L298 236
+             C302 232 308 232 312 236
+             C316 240 316 246 312 250
+             L256 308
+             C253 311 247 311 244 308
+             L216 280
+             C212 276 212 270 216 266
+             C220 262 225 262 228 266 Z"
+          fill="#133E2D" />
+
+    <!-- Caring Hands Cupping the Base (Warm Gold) -->
+    <g fill="url(#hGoldHand)" stroke="#FAF6ED" stroke-width="6" stroke-linejoin="round">
+      <path d="M138 274
+               C142 305 158 355 198 388
+               C218 404 246 414 256 418
+               C254 410 244 390 230 378
+               C208 360 176 338 168 296
+               C164 276 150 260 142 260
+               C138 260 136 266 138 274 Z" />
+      <path d="M374 274
+               C370 305 354 355 314 388
+               C294 404 266 414 256 418
+               C258 410 268 390 282 378
+               C304 360 336 338 344 296
+               C348 276 362 260 370 260
+               C374 260 376 266 374 274 Z" />
+    </g>
+  </g>
+
+  <!-- Typography Right Lockup -->
+  <text x="80" y="42" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="34" letter-spacing="-0.8">
+    <tspan fill="#133E2D">Match</tspan><tspan fill="#B28544">Guard</tspan>
+  </text>
+  <text x="82" y="60" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="600" font-size="9.5" letter-spacing="1.8" fill="#1C5640">
+    BUY SAFE &bull; SELL CONFIDENTLY
+  </text>
+</svg>

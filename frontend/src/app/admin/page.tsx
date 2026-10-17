@@ -33,9 +33,10 @@ import {
   Store,
   MapPin,
   Download,
+  Award,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { adminApi } from "@/lib/admin-api";
+import { adminApi, adminCredentialsApi } from "@/lib/admin-api";
 import { ordersApi } from "@/lib/orders-api";
 import {
   AdminDecisionRequest,
@@ -43,6 +44,7 @@ import {
   ComplaintDto,
   OrderDto,
   SellerApplicationDto,
+  SellerCredentialDto,
   SellerSubscriptionDto,
   StoreProfileDto,
   VerificationEvidenceDto,
@@ -57,7 +59,7 @@ export default function AdminDashboardPage() {
 
   // Navigation Tab State
   const [activeTab, setActiveTab] = useState<
-    "verifications" | "disputes" | "subscriptions" | "reverifications"
+    "verifications" | "disputes" | "subscriptions" | "reverifications" | "credentials"
   >("verifications");
 
   // ==========================================
@@ -134,6 +136,30 @@ export default function AdminDashboardPage() {
     message: string;
   } | null>(null);
 
+  // ==========================================
+  // TAB 5: SELLER CREDENTIALS & BADGES QUEUE STATE
+  // ==========================================
+  const [credentials, setCredentials] = useState<SellerCredentialDto[]>([]);
+  const [isCredsLoading, setIsCredsLoading] = useState<boolean>(true);
+  const [credsError, setCredsError] = useState<string | null>(null);
+  const [selectedCredStatus, setSelectedCredStatus] = useState<string>("All");
+
+  // Credential Revocation Modal State
+  const [activeRevokeCred, setActiveRevokeCred] = useState<SellerCredentialDto | null>(null);
+  const [revocationReason, setRevocationReason] = useState<string>("");
+  const [isRevokingCred, setIsRevokingCred] = useState<boolean>(false);
+  const [credDecisionFeedback, setCredDecisionFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+  const [downloadingCertId, setDownloadingCertId] = useState<string | null>(null);
+
+  // Credential Issuance Modal State
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState<boolean>(false);
+  const [issueSellerUserId, setIssueSellerUserId] = useState<string>("");
+  const [issueReason, setIssueReason] = useState<string>("");
+  const [isIssuingCred, setIsIssuingCred] = useState<boolean>(false);
+
   // ------------------------------------------
   // Data Fetching
   // ------------------------------------------
@@ -189,6 +215,21 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
+  const fetchCredentials = useCallback(async () => {
+    setIsCredsLoading(true);
+    setCredsError(null);
+    try {
+      const data = await adminCredentialsApi.getCredentials({
+        status: selectedCredStatus !== "All" ? selectedCredStatus : undefined,
+      });
+      setCredentials(data);
+    } catch (err: unknown) {
+      setCredsError(err instanceof Error ? err.message : "Failed to load seller credentials.");
+    } finally {
+      setIsCredsLoading(false);
+    }
+  }, [selectedCredStatus]);
+
   useEffect(() => {
     if (!authLoading) {
       if (!isAuthenticated) {
@@ -198,6 +239,7 @@ export default function AdminDashboardPage() {
         fetchComplaints();
         fetchSubscriptions();
         fetchStores();
+        fetchCredentials();
       }
     }
   }, [
@@ -209,6 +251,7 @@ export default function AdminDashboardPage() {
     fetchComplaints,
     fetchSubscriptions,
     fetchStores,
+    fetchCredentials,
   ]);
 
   // Load order details when opening complaint modal
@@ -466,6 +509,111 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleRevokeCredential = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeRevokeCred) return;
+
+    if (!revocationReason.trim()) {
+      setCredDecisionFeedback({
+        type: "error",
+        message: "A revocation reason is required to explain why this credential is being revoked.",
+      });
+      return;
+    }
+
+    setIsRevokingCred(true);
+    setCredDecisionFeedback(null);
+
+    try {
+      const updated = await adminCredentialsApi.revokeCredential(activeRevokeCred.id, {
+        reason: revocationReason.trim(),
+      });
+
+      setCredentials((prev) =>
+        prev.map((c) => (c.id === updated.id ? updated : c))
+      );
+
+      setCredDecisionFeedback({
+        type: "success",
+        message: `Credential ${updated.publicCredentialId} successfully revoked. The central registry and live badges reflect this change immediately.`,
+      });
+
+      setTimeout(() => {
+        setActiveRevokeCred(null);
+        setRevocationReason("");
+        setCredDecisionFeedback(null);
+      }, 1000);
+    } catch (err: unknown) {
+      setCredDecisionFeedback({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to revoke credential.",
+      });
+    } finally {
+      setIsRevokingCred(false);
+    }
+  };
+
+  const handleIssueCredential = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!issueSellerUserId.trim()) {
+      setCredDecisionFeedback({
+        type: "error",
+        message: "Please select an approved seller to issue a credential for.",
+      });
+      return;
+    }
+
+    setIsIssuingCred(true);
+    setCredDecisionFeedback(null);
+
+    try {
+      const created = await adminCredentialsApi.issueCredential({
+        sellerUserId: issueSellerUserId.trim(),
+        reason: issueReason.trim() || undefined,
+      });
+
+      setCredentials((prev) => [created, ...prev.filter((c) => c.id !== created.id)]);
+
+      setCredDecisionFeedback({
+        type: "success",
+        message: `Credential ${created.publicCredentialId} issued successfully for ${created.storeName || "seller"}!`,
+      });
+
+      setTimeout(() => {
+        setIsIssueModalOpen(false);
+        setIssueSellerUserId("");
+        setIssueReason("");
+        setCredDecisionFeedback(null);
+      }, 1000);
+    } catch (err: unknown) {
+      setCredDecisionFeedback({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to issue credential.",
+      });
+    } finally {
+      setIsIssuingCred(false);
+    }
+  };
+
+  const handleDownloadAdminCertificate = async (cred: SellerCredentialDto) => {
+    setDownloadingCertId(cred.id);
+    try {
+      const blob = await adminCredentialsApi.downloadCertificate(cred.id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `MatchGuard-Certificate-${cred.publicCredentialId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to download official certificate.");
+    } finally {
+      setDownloadingCertId(null);
+    }
+  };
+
   if (authLoading) {
     return (
       <MobileViewportContainer header={<AppHeader />}>
@@ -599,6 +747,19 @@ export default function AdminDashboardPage() {
           (s) => s.verificationStatus.toLowerCase() === selectedStoreStatus.toLowerCase()
         );
 
+  // Seller Credentials & Badges
+  const totalCredsCount = credentials.length;
+  const activeCredsCount = credentials.filter((c) => c.status === "Active").length;
+  const revokedCredsCount = credentials.filter((c) => c.status === "Revoked").length;
+  const expiredCredsCount = credentials.filter((c) => c.status === "Expired").length;
+
+  const filteredCredentials =
+    selectedCredStatus === "All"
+      ? credentials
+      : credentials.filter(
+          (c) => c.status.toLowerCase() === selectedCredStatus.toLowerCase()
+        );
+
   return (
     <MobileViewportContainer
       header={<AppHeader />}
@@ -636,14 +797,15 @@ export default function AdminDashboardPage() {
               if (activeTab === "verifications") fetchApplications();
               else if (activeTab === "disputes") fetchComplaints();
               else if (activeTab === "subscriptions") fetchSubscriptions();
-              else fetchStores();
+              else if (activeTab === "reverifications") fetchStores();
+              else fetchCredentials();
             }}
-            disabled={isAppsLoading || isComplaintsLoading || isSubsLoading || isStoresLoading}
+            disabled={isAppsLoading || isComplaintsLoading || isSubsLoading || isStoresLoading || isCredsLoading}
             className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-xs font-semibold text-ink-700 transition-colors shadow-2xs cursor-pointer"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${
-                isAppsLoading || isComplaintsLoading || isSubsLoading || isStoresLoading ? "animate-spin text-jade-700" : "text-ink-500"
+                isAppsLoading || isComplaintsLoading || isSubsLoading || isStoresLoading || isCredsLoading ? "animate-spin text-jade-700" : "text-ink-500"
               }`}
             />
             <span>Refresh</span>
@@ -743,6 +905,28 @@ export default function AdminDashboardPage() {
               }`}
             >
               {pendingStoresCount > 0 ? `${pendingStoresCount} pending` : totalStoresCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("credentials")}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "credentials"
+                ? "bg-jade-800 text-white shadow-2xs"
+                : "bg-white text-ink-600 hover:bg-stone-100 border border-stone-200"
+            }`}
+          >
+            <Award className="w-4 h-4" />
+            <span>Seller Credentials &amp; Badges</span>
+            <span
+              className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                activeTab === "credentials"
+                  ? "bg-white/20 text-white"
+                  : "bg-stone-100 text-ink-700"
+              }`}
+            >
+              {activeCredsCount > 0 ? `${activeCredsCount} active` : totalCredsCount}
             </span>
           </button>
         </div>
@@ -1718,6 +1902,272 @@ export default function AdminDashboardPage() {
         )}
 
         {/* ========================================================================= */}
+        {/* TAB 5 CONTENT: SELLER CREDENTIALS & BADGES REGISTRY                       */}
+        {/* ========================================================================= */}
+        {activeTab === "credentials" && (
+          <div className="space-y-6 animate-fade-in">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-2xl bg-white border border-stone-200/80 shadow-2xs space-y-1">
+                <div className="text-[11px] font-semibold text-ink-500">Total Credentials</div>
+                <div className="text-xl font-bold text-ink-900 font-mono">{totalCredsCount}</div>
+                <div className="text-[10px] text-ink-400">All issued records</div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-white border border-stone-200/80 shadow-2xs space-y-1">
+                <div className="text-[11px] font-semibold text-jade-700">Active Credentials</div>
+                <div className="text-xl font-bold text-jade-800 font-mono">{activeCredsCount}</div>
+                <div className="text-[10px] text-jade-600">Valid in central registry</div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-white border border-stone-200/80 shadow-2xs space-y-1">
+                <div className="text-[11px] font-semibold text-rose-700">Revoked</div>
+                <div className="text-xl font-bold text-rose-800 font-mono">{revokedCredsCount}</div>
+                <div className="text-[10px] text-rose-500">Invalidated by admin</div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-white border border-stone-200/80 shadow-2xs space-y-1">
+                <div className="text-[11px] font-semibold text-amber-700">Expired</div>
+                <div className="text-xl font-bold text-amber-800 font-mono">{expiredCredsCount}</div>
+                <div className="text-[10px] text-amber-500">Past validity period</div>
+              </div>
+            </div>
+
+            {/* Filter and Issuance Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-stone-200/80 shadow-2xs">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                <span className="text-xs text-ink-500 font-medium mr-1 flex items-center gap-1 shrink-0">
+                  <Filter className="w-3.5 h-3.5" />
+                  <span>Filter:</span>
+                </span>
+                {(["All", "Active", "Revoked", "Expired"] as const).map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setSelectedCredStatus(st)}
+                    className={`px-3 py-1 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                      selectedCredStatus === st
+                        ? "bg-jade-800 text-white shadow-2xs"
+                        : "bg-stone-100 text-ink-600 hover:bg-stone-200"
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsIssueModalOpen(true);
+                  setIssueSellerUserId("");
+                  setIssueReason("");
+                  setCredDecisionFeedback(null);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-jade-800 hover:bg-jade-900 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer self-start sm:self-auto shrink-0"
+              >
+                <Award className="w-3.5 h-3.5" />
+                <span>Issue Credential</span>
+              </button>
+            </div>
+
+            {/* Loading / Error States */}
+            {isCredsLoading && (
+              <div className="bg-white rounded-3xl border border-stone-200/80 p-8 text-center space-y-2">
+                <Loader2 className="w-6 h-6 animate-spin text-jade-700 mx-auto" />
+                <p className="text-xs text-ink-500">Loading seller credentials registry...</p>
+              </div>
+            )}
+
+            {!isCredsLoading && credsError && (
+              <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold block">Failed to load credentials</span>
+                  <p>{credsError}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!isCredsLoading && !credsError && filteredCredentials.length === 0 && (
+              <div className="bg-white rounded-3xl border border-stone-200/80 p-10 text-center space-y-2">
+                <Award className="w-8 h-8 text-stone-300 mx-auto" />
+                <h4 className="text-sm font-bold text-ink-800">No Credentials Found</h4>
+                <p className="text-xs text-ink-500 max-w-sm mx-auto">
+                  {selectedCredStatus === "All"
+                    ? "No official identity credentials have been issued yet. Credentials are automatically issued when seller applications are approved."
+                    : `No credentials matching status "${selectedCredStatus}".`}
+                </p>
+              </div>
+            )}
+
+            {/* Credentials List Cards */}
+            {!isCredsLoading && !credsError && filteredCredentials.length > 0 && (
+              <div className="space-y-4">
+                {filteredCredentials.map((cred) => {
+                  const isActive = cred.status === "Active";
+                  const isRevoked = cred.status === "Revoked";
+                  const isExpired = cred.status === "Expired";
+
+                  return (
+                    <div
+                      key={cred.id}
+                      className="bg-white rounded-2xl border border-stone-200/90 p-5 space-y-4 shadow-2xs hover:border-stone-300 transition-all"
+                    >
+                      {/* Top Bar */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-100">
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`p-2.5 rounded-2xl shrink-0 mt-0.5 ${
+                              isActive
+                                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                                : isRevoked
+                                ? "bg-rose-50 text-rose-800 border border-rose-200"
+                                : "bg-amber-50 text-amber-800 border border-amber-200"
+                            }`}
+                          >
+                            {isActive ? (
+                              <ShieldCheck className="w-5 h-5 text-emerald-700" />
+                            ) : isRevoked ? (
+                              <ShieldAlert className="w-5 h-5 text-rose-700" />
+                            ) : (
+                              <Clock className="w-5 h-5 text-amber-700" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-bold text-ink-900 tracking-tight">
+                                {cred.storeName || "Artisan Store"}
+                              </h4>
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                  isActive
+                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                    : isRevoked
+                                    ? "bg-rose-100 text-rose-800 border border-rose-300"
+                                    : "bg-amber-100 text-amber-800 border border-amber-300"
+                                }`}
+                              >
+                                {cred.status}
+                              </span>
+                            </div>
+                            <p className="text-xs text-ink-500">
+                              Seller: <span className="font-medium text-ink-700">{cred.sellerDisplayName}</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Public Credential ID */}
+                        <div className="shrink-0 text-left sm:text-right">
+                          <span className="text-[10px] text-ink-400 font-semibold uppercase tracking-wider block">
+                            Public Credential ID
+                          </span>
+                          <span className="font-mono text-xs font-bold text-ink-900 tracking-wider">
+                            {cred.publicCredentialId}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Details Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div className="space-y-0.5">
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-ink-400 block">
+                            Issued Timestamp (UTC)
+                          </span>
+                          <span className="font-mono text-ink-700 text-[11px]">
+                            {new Date(cred.issuedAtUtc).toISOString().replace("T", " ").slice(0, 19)} UTC
+                          </span>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-ink-400 block">
+                            Seller User ID
+                          </span>
+                          <span className="font-mono text-ink-600 text-[11px] truncate block">
+                            {cred.sellerUserId}
+                          </span>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-ink-400 block">
+                            Credential Scope
+                          </span>
+                          <span className="text-[11px] text-ink-700 font-medium">
+                            Identity Verified by MatchGuard
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Revocation Details if Revoked */}
+                      {isRevoked && (
+                        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-950 space-y-1">
+                          <div className="flex items-center gap-1.5 font-bold text-rose-900">
+                            <AlertCircle className="w-3.5 h-3.5 text-rose-700 shrink-0" />
+                            <span>
+                              Revoked on {cred.revokedAtUtc ? new Date(cred.revokedAtUtc).toISOString().replace("T", " ").slice(0, 19) + " UTC" : "N/A"}
+                            </span>
+                          </div>
+                          {cred.revocationReason && (
+                            <p className="text-[11px] text-rose-800 italic">
+                              Audit Reason: &quot;{cred.revocationReason}&quot;
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Actions Footer */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-stone-100">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadAdminCertificate(cred)}
+                            disabled={downloadingCertId === cred.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-xs font-semibold text-ink-700 shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            {downloadingCertId === cred.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-jade-700" />
+                            ) : (
+                              <Download className="w-3.5 h-3.5 text-jade-700" />
+                            )}
+                            <span>Download PDF</span>
+                          </button>
+
+                          <Link
+                            href={`/verify/${cred.publicCredentialId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-stone-200 hover:bg-stone-50 text-xs font-semibold text-ink-600 transition-colors"
+                          >
+                            <span>Registry View</span>
+                            <ExternalLink className="w-3 h-3 text-ink-400" />
+                          </Link>
+                        </div>
+
+                        {isActive && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveRevokeCred(cred);
+                              setRevocationReason("");
+                              setCredDecisionFeedback(null);
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-300 hover:bg-rose-50 text-rose-700 hover:text-rose-900 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                          >
+                            <ShieldAlert className="w-3.5 h-3.5" />
+                            <span>Revoke Credential</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================================= */}
         {/* MODAL 1: SELLER APPLICATION DECISION MODAL                                */}
         {/* ========================================================================= */}
         {activeApp && decisionAction && (
@@ -2341,6 +2791,233 @@ export default function AdminDashboardPage() {
                         ? "Approve & Restore Verified"
                         : "Confirm Rejection"}
                     </span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* MODAL 5: CREDENTIAL REVOCATION MODAL                                      */}
+        {/* ========================================================================= */}
+        {activeRevokeCred && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/50 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-rose-200 p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-800 flex items-center justify-center border border-rose-200">
+                    <ShieldAlert className="w-4 h-4 text-rose-700" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-ink-900">
+                      Revoke Seller Credential
+                    </h3>
+                    <p className="text-[11px] font-mono text-ink-500">
+                      {activeRevokeCred.publicCredentialId}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Target Details */}
+              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200/80 text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-ink-500">Store:</span>
+                  <span className="font-semibold text-ink-900">{activeRevokeCred.storeName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-ink-500">Seller:</span>
+                  <span className="font-semibold text-ink-900">{activeRevokeCred.sellerDisplayName}</span>
+                </div>
+              </div>
+
+              {/* Warning Banner */}
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-950 space-y-1">
+                <span className="font-bold flex items-center gap-1.5 text-rose-900">
+                  <AlertTriangle className="w-4 h-4 text-rose-700 shrink-0" />
+                  <span>Immediate Cascading Revocation</span>
+                </span>
+                <p className="text-[11px] leading-relaxed text-rose-900/90">
+                  Revoking this credential will immediately update the central registry, render all live badges as Revoked, and update public verification pages. This action is auditable and irreversible.
+                </p>
+              </div>
+
+              {credDecisionFeedback && (
+                <div
+                  className={`p-3 rounded-xl text-xs flex items-start gap-2 ${
+                    credDecisionFeedback.type === "success"
+                      ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                      : "bg-red-50 text-red-800 border border-red-200"
+                  }`}
+                >
+                  {credDecisionFeedback.type === "success" ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  )}
+                  <p>{credDecisionFeedback.message}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleRevokeCredential} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="credRevocationReason"
+                    className="block text-xs font-semibold text-ink-800"
+                  >
+                    Mandatory Revocation Reason <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="credRevocationReason"
+                    rows={3}
+                    required
+                    value={revocationReason}
+                    onChange={(e) => setRevocationReason(e.target.value)}
+                    disabled={isRevokingCred}
+                    placeholder="e.g. Identity documentation expired, suspected impersonation, or seller account suspended."
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-600"
+                  />
+                  <p className="text-[10px] text-ink-400">
+                    This reason will be recorded in the official audit trail and displayed on the public verification page.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveRevokeCred(null);
+                      setRevocationReason("");
+                    }}
+                    disabled={isRevokingCred}
+                    className="px-3.5 py-1.5 rounded-xl border border-stone-300 text-xs font-semibold text-ink-700 hover:bg-stone-50 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isRevokingCred || !revocationReason.trim()}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isRevokingCred && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Confirm Revocation</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* MODAL 6: CREDENTIAL MANUAL ISSUANCE MODAL                                 */}
+        {/* ========================================================================= */}
+        {isIssueModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/50 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-stone-200 p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-jade-50 text-jade-800 flex items-center justify-center border border-jade-200">
+                    <Award className="w-4 h-4 text-jade-700" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-ink-900">
+                      Issue Identity Credential
+                    </h3>
+                    <p className="text-[11px] text-ink-500">
+                      Authorized Admin Issuance
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {credDecisionFeedback && (
+                <div
+                  className={`p-3 rounded-xl text-xs flex items-start gap-2 ${
+                    credDecisionFeedback.type === "success"
+                      ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                      : "bg-red-50 text-red-800 border border-red-200"
+                  }`}
+                >
+                  {credDecisionFeedback.type === "success" ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  )}
+                  <p>{credDecisionFeedback.message}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleIssueCredential} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="issueSellerSelect"
+                    className="block text-xs font-semibold text-ink-800"
+                  >
+                    Select Approved Seller <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="issueSellerSelect"
+                    required
+                    value={issueSellerUserId}
+                    onChange={(e) => setIssueSellerUserId(e.target.value)}
+                    disabled={isIssuingCred}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-jade-500/20 focus:border-jade-600"
+                  >
+                    <option value="">-- Choose an Approved Seller --</option>
+                    {applications
+                      .filter((a) => a.status === "Approved")
+                      .map((a) => (
+                        <option key={a.userId} value={a.userId}>
+                          {a.proposedStoreName} ({a.businessType})
+                        </option>
+                      ))}
+                  </select>
+                  <p className="text-[10px] text-ink-400">
+                    Only sellers with an approved identity verification application are eligible.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="issueReason"
+                    className="block text-xs font-semibold text-ink-800"
+                  >
+                    Audit Note / Reason (Optional)
+                  </label>
+                  <input
+                    id="issueReason"
+                    type="text"
+                    value={issueReason}
+                    onChange={(e) => setIssueReason(e.target.value)}
+                    disabled={isIssuingCred}
+                    placeholder="e.g. Identity verified via national registration review."
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-jade-500/20 focus:border-jade-600"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsIssueModalOpen(false);
+                      setIssueSellerUserId("");
+                      setIssueReason("");
+                    }}
+                    disabled={isIssuingCred}
+                    className="px-3.5 py-1.5 rounded-xl border border-stone-300 text-xs font-semibold text-ink-700 hover:bg-stone-50 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isIssuingCred || !issueSellerUserId.trim()}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-jade-800 hover:bg-jade-900 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isIssuingCred && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Issue Official Credential</span>
                   </button>
                 </div>
               </form>

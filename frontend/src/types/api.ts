@@ -355,3 +355,50 @@ export interface PlatformPaymentMethodDto {
   qrCodeUrl?: string | null;
 }
 
+export interface SellerCredentialDto {
+  id: string;
+  publicCredentialId: string;
+  sellerUserId: string;
+  storeName: string;
+  sellerDisplayName: string;
+  credentialType: string;
+  status: "Active" | "Revoked" | "Expired" | string;
+  issuedAtUtc: string;
+  revokedAtUtc?: string | null;
+  revocationReason?: string | null;
+  publicVerificationUrl: string;
+  badgeSvgUrl: string;
+  badgePngUrl: string;
+  certificateDownloadUrl: string;
+}
+
+export interface PublicCredentialVerificationDto {
+  publicCredentialId: string;
+  status: "Active" | "Revoked" | "Expired" | "Invalid" | string;
+  sellerDisplayName?: string | null;
+  storeName?: string | null;
+  credentialType: string;
+  issuedAtUtc?: string | null;
+  revokedAtUtc?: string | null;
+  revocationReason?: string | null;
+  verificationScope: string;
+  isValid: boolean;
+}
+
+export interface SellerCredentialStatusDto {
+  isEligible: boolean;
+  ineligibilityReason?: string | null;
+  activeCredential?: SellerCredentialDto | null;
+  history: SellerCredentialDto[];
+}
+
+export interface IssueCredentialRequest {
+  sellerUserId: string;
+  reason?: string | null;
+}
+
+export interface RevokeCredentialRequest {
+  reason: string;
+}
+
+

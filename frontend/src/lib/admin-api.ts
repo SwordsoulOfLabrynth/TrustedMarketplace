@@ -10,6 +10,9 @@ import {
   SellerSubscriptionDto,
   StoreProfileDto,
   VerifySubscriptionPaymentRequest,
+  SellerCredentialDto,
+  IssueCredentialRequest,
+  RevokeCredentialRequest,
 } from "@/types/api";
 
 export interface GetApplicationsParams {
@@ -174,4 +177,65 @@ export const adminApi = {
     );
   },
 };
+
+export interface GetCredentialsParams {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+}
+
+export const adminCredentialsApi = {
+  /**
+   * Fetches issued seller credentials for administration.
+   */
+  async getCredentials(params?: GetCredentialsParams): Promise<SellerCredentialDto[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set("page", params.page.toString());
+    if (params?.pageSize) searchParams.set("pageSize", params.pageSize.toString());
+    if (params?.status && params.status !== "All") searchParams.set("status", params.status);
+
+    const query = searchParams.toString();
+    const endpoint = `/api/v1/admin/credentials${query ? `?${query}` : ""}`;
+    return await apiClient.get<SellerCredentialDto[]>(endpoint);
+  },
+
+  /**
+   * Issues an official credential for an approved seller.
+   */
+  async issueCredential(request: IssueCredentialRequest): Promise<SellerCredentialDto> {
+    return await apiClient.post<SellerCredentialDto>("/api/v1/admin/credentials/issue", request);
+  },
+
+  /**
+   * Revokes an issued credential with a mandatory reason.
+   */
+  async revokeCredential(id: string, request: RevokeCredentialRequest): Promise<SellerCredentialDto> {
+    return await apiClient.post<SellerCredentialDto>(`/api/v1/admin/credentials/${id}/revoke`, request);
+  },
+
+  /**
+   * Generates admin certificate download URL for audit.
+   */
+  getCertificateDownloadUrl(id: string): string {
+    return `${apiClient.getBaseUrl()}/api/v1/admin/credentials/${id}/certificate`;
+  },
+
+  /**
+   * Securely streams official PDF certificate for administrative audit.
+   */
+  async downloadCertificate(id: string): Promise<Blob> {
+    const baseUrl = apiClient.getBaseUrl();
+    const token = apiClient.getAccessToken();
+    const response = await fetch(`${baseUrl}/api/v1/admin/credentials/${id}/certificate`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to download certificate (${response.status})`);
+    }
+    return await response.blob();
+  },
+};
+
 

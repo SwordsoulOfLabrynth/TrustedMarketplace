@@ -293,9 +293,59 @@ public class VerificationService : IVerificationService
                 {
                     existingProfile.MarkVerified();
                 }
+
+                // Auto-issue active SellerCredential if none exists
+                var existingCred = await _dbContext.SellerCredentials
+                    .FirstOrDefaultAsync(c => c.SellerUserId == application.UserId && c.Status == Domain.Credentials.CredentialStatus.Active, ct);
+
+                if (existingCred == null)
+                {
+                    const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+                    var randomBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(12);
+                    var idSb = new System.Text.StringBuilder("MG-ID-");
+                    for (int i = 0; i < 12; i++)
+                    {
+                        if (i > 0 && i % 4 == 0) idSb.Append('-');
+                        idSb.Append(chars[randomBytes[i] % chars.Length]);
+                    }
+
+                    var newCredential = Domain.Credentials.SellerCredential.Issue(
+                        application.UserId,
+                        application.Id,
+                        adminUserId,
+                        idSb.ToString(),
+                        Domain.Credentials.CredentialType.IdentityVerified);
+
+                    _dbContext.SellerCredentials.Add(newCredential);
+
+                    var credAudit = AuditEvent.Create(
+                        action: "SellerCredential_Issued",
+                        targetType: "SellerCredential",
+                        targetId: newCredential.Id.ToString(),
+                        correlationId: correlationId,
+                        actorUserId: adminUserId,
+                        reason: request.Reason);
+                    _dbContext.AuditEvents.Add(credAudit);
+                }
                 break;
             case "Rejected":
                 application.Reject(adminUserId, request.Reason);
+
+                var activeCreds = await _dbContext.SellerCredentials
+                    .Where(c => c.SellerUserId == application.UserId && c.Status == Domain.Credentials.CredentialStatus.Active)
+                    .ToListAsync(ct);
+
+                foreach (var cred in activeCreds)
+                {
+                    cred.Revoke(adminUserId, $"Verification application rejected: {request.Reason}");
+                    _dbContext.AuditEvents.Add(AuditEvent.Create(
+                        action: "SellerCredential_Revoked",
+                        targetType: "SellerCredential",
+                        targetId: cred.Id.ToString(),
+                        correlationId: correlationId,
+                        actorUserId: adminUserId,
+                        reason: $"Verification application rejected: {request.Reason}"));
+                }
                 break;
             case "MoreInformationRequired":
                 application.RequestMoreInformation(adminUserId, request.Reason);

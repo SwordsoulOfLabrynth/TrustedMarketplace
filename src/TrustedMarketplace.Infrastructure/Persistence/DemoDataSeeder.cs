@@ -148,6 +148,22 @@ public static class DemoDataSeeder
             logger.LogInformation("Demo Seller Subscription seeded with Premium tier.");
         }
 
+        // 6.1 Ensure Seller has an active Identity-Verified Seller Credential
+        var sellerCred = await dbContext.SellerCredentials
+            .FirstOrDefaultAsync(c => c.SellerUserId == sellerUser.Id && c.Status == TrustedMarketplace.Domain.Credentials.CredentialStatus.Active);
+        if (sellerCred == null)
+        {
+            sellerCred = TrustedMarketplace.Domain.Credentials.SellerCredential.Issue(
+                sellerUser.Id,
+                sellerApp.Id,
+                adminUser.Id,
+                "MG-ID-DEMO-ARTISAN-01",
+                TrustedMarketplace.Domain.Credentials.CredentialType.IdentityVerified);
+            dbContext.SellerCredentials.Add(sellerCred);
+            await dbContext.SaveChangesAsync();
+            logger.LogInformation("Demo Identity-Verified Seller Credential seeded: {PublicId}", sellerCred.PublicCredentialId);
+        }
+
         // 7. Ensure sample Myanmar artisan products exist
         var existingProductsCount = await dbContext.Products
             .CountAsync(p => p.SellerUserId == sellerUser.Id);

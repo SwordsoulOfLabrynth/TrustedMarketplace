@@ -10,6 +10,8 @@ import {
   SubscriptionPlanDto,
   UpdateStoreProfileRequest,
   VerificationEvidenceDto,
+  SellerCredentialStatusDto,
+  SellerCredentialDto,
 } from "@/types/api";
 
 export const sellerApplicationApi = {
@@ -127,3 +129,75 @@ export const sellerSubscriptionApi = {
     );
   },
 };
+
+export const sellerCredentialsApi = {
+  /**
+   * Retrieves current seller's credential status, active credential, and history.
+   */
+  async getMyStatus(): Promise<SellerCredentialStatusDto> {
+    return await apiClient.get<SellerCredentialStatusDto>("/api/v1/seller/credentials/my");
+  },
+
+  /**
+   * Generates certificate download URL for active credential.
+   */
+  getMyCertificateDownloadUrl(): string {
+    return `${apiClient.getBaseUrl()}/api/v1/seller/credentials/my/certificate`;
+  },
+
+  /**
+   * Generates certificate download URL for specific credential ID.
+   */
+  getCertificateDownloadUrl(id: string): string {
+    return `${apiClient.getBaseUrl()}/api/v1/seller/credentials/${id}/certificate`;
+  },
+
+  /**
+   * Gets public badge SVG URL.
+   */
+  getBadgeSvgUrl(publicId: string): string {
+    return `${apiClient.getBaseUrl()}/api/v1/public/credentials/${publicId}/badge.svg`;
+  },
+
+  /**
+   * Gets public badge PNG URL.
+   */
+  getBadgePngUrl(publicId: string): string {
+    return `${apiClient.getBaseUrl()}/api/v1/public/credentials/${publicId}/badge.png`;
+  },
+
+  /**
+   * Securely streams official PDF certificate for currently authenticated seller.
+   */
+  async downloadMyCertificate(): Promise<Blob> {
+    const baseUrl = apiClient.getBaseUrl();
+    const token = apiClient.getAccessToken();
+    const response = await fetch(`${baseUrl}/api/v1/seller/credentials/my/certificate`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to download certificate (${response.status})`);
+    }
+    return await response.blob();
+  },
+
+  /**
+   * Securely streams official PDF certificate by credential ID.
+   */
+  async downloadCertificate(id: string): Promise<Blob> {
+    const baseUrl = apiClient.getBaseUrl();
+    const token = apiClient.getAccessToken();
+    const response = await fetch(`${baseUrl}/api/v1/seller/credentials/${id}/certificate`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to download certificate (${response.status})`);
+    }
+    return await response.blob();
+  },
+};
+

@@ -26,6 +26,7 @@ import { StoreProfileDto } from "@/types/api";
 import { ApiException } from "@/lib/api-client";
 import { MobileViewportContainer } from "@/components/layout/MobileViewportContainer";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { SellerCertificateCard } from "@/components/seller/SellerCertificateCard";
 
 export default function SellerStoreProfilePage() {
   const router = useRouter();
@@ -338,6 +339,9 @@ export default function SellerStoreProfilePage() {
             </div>
           </div>
         )}
+
+        {/* Official Identity-Verified Seller Credential & Badge Section */}
+        <SellerCertificateCard />
 
         {/* Store Edit Form */}
         <form
