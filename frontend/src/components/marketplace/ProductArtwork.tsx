@@ -71,7 +71,7 @@ export function ProductArtwork({
   return (
     <div
       className={`relative w-full overflow-hidden bg-stone-50/80 border-b border-stone-200/50 flex flex-col items-center justify-center p-3 text-center select-none ${aspectClass} ${className}`}
-      aria-label={`Artisan craft listing: ${title}`}
+      aria-label={`Product listing: ${title}`}
     >
       <div className="relative z-10 flex flex-col items-center gap-1.5 max-w-full px-2">
         <div className="w-8 h-8 rounded-full bg-stone-200/60 flex items-center justify-center text-stone-400">
@@ -87,7 +87,7 @@ export function ProductArtwork({
           </span>
         )}
         <span className="text-[10px] text-stone-400 font-sans">
-          {hasImageError ? "Photo unavailable" : "Photography pending"}
+          {hasImageError ? "Photo unavailable" : "Image pending"}
         </span>
       </div>
     </div>

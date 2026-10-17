@@ -94,7 +94,7 @@ export function OrderPlacementModal({
               Confirm Non-Custodial Order
             </h2>
             <span className="text-[11px] text-jade-700 font-medium block">
-              Direct Artisan Settlement
+              Direct Seller Settlement
             </span>
           </div>
           <button
@@ -248,7 +248,7 @@ export function OrderPlacementModal({
               <span>Direct Settlement &amp; Payment Agreement</span>
             </div>
             <p className="leading-relaxed">
-              MatchGuard operates non-custodially and does not hold funds. After you place this order, the verified artisan will contact your phone number to coordinate direct payment (KBZPay, WavePay, or Cash on Delivery) and fulfillment details.
+              MatchGuard operates non-custodially and does not hold funds. After you place this order, the seller will contact your phone number to coordinate direct payment (KBZPay, WavePay, or Cash on Delivery) and fulfillment details.
             </p>
           </div>
         </div>

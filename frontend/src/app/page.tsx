@@ -126,10 +126,10 @@ export default function Home() {
         <section className="pt-1 pb-2 space-y-2.5">
           <div className="space-y-0.5">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900 leading-snug">
-              Direct from Myanmar Artisans
+              Shop with Verified Seller Confidence
             </h1>
             <p className="text-xs text-ink-500 leading-relaxed">
-              Direct, non-custodial marketplace connecting buyers with verified authentic Myanmar craft artisans.
+              Discover electronics, fashion, beauty, home essentials, local food, and artisan goods from verified Myanmar sellers.
             </p>
           </div>
 
@@ -140,7 +140,7 @@ export default function Home() {
                 type="text"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder="Search crafts, materials, or artisans — e.g. marionette, lacquerware, lotus silk..."
+                placeholder="Search products, brands, or categories — e.g. wireless earbuds, cotton shirt, face serum..."
                 className="w-full pl-9 pr-20 py-2 rounded-xl bg-white border border-stone-300 text-ink-900 text-xs sm:text-sm placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-jade-600/20 focus:border-jade-700 transition-all font-medium shadow-2xs"
               />
               <Search className="w-4 h-4 text-ink-400 absolute left-3 pointer-events-none" />
@@ -153,17 +153,18 @@ export default function Home() {
             </div>
           </form>
 
-          {/* Quick Craft Filter Chips */}
+          {/* Quick Category Filter Chips */}
           <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-ink-500">
             <span className="font-medium text-ink-600 flex items-center gap-1">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-jade-600" />
-              <span>Semantic Search:</span>
+              <span>Popular Searches:</span>
             </span>
             {[
-              { label: "Puppets (Marionettes)", q: "Puppets" },
+              { label: "Wireless Earbuds", q: "Earbuds" },
+              { label: "Cotton Shirt", q: "Shirt" },
+              { label: "Face Serum", q: "Serum" },
+              { label: "Green Tea", q: "Green Tea" },
               { label: "Lacquerware", q: "Lacquerware" },
-              { label: "Lotus Silk", q: "Lotus Silk" },
-              { label: "Teakwood", q: "Teakwood" },
             ].map(({ label, q }) => (
               <button
                 key={q}
@@ -203,10 +204,10 @@ export default function Home() {
           <div className="flex items-baseline justify-between border-b border-stone-200/80 pb-2">
             <div>
               <h2 className="text-base sm:text-lg font-bold text-ink-900 tracking-tight">
-                Curated Craft Pieces
+                Featured Products
               </h2>
               <span className="text-[11px] text-ink-500">
-                Verified Myanmar workshops ({totalProducts})
+                Explore listings from verified sellers across Myanmar ({totalProducts})
               </span>
             </div>
             <Link
@@ -248,25 +249,13 @@ export default function Home() {
           )}
         </section>
 
-        {/* Traditional Craft Disciplines */}
+        {/* Product Categories */}
         <section className="space-y-3">
           <h2 className="text-xs font-bold uppercase tracking-wider text-ink-600">
-            Craft Disciplines
+            Product Categories
           </h2>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-            <Link
-              href="/products"
-              className="p-3 rounded-xl bg-white border border-stone-200/80 hover:border-jade-500/40 hover:bg-stone-50/50 shadow-2xs transition-all space-y-0.5 block group"
-            >
-              <span className="font-bold text-xs text-ink-900 group-hover:text-jade-800 block">
-                All Collections
-              </span>
-              <span className="text-[10px] text-ink-500 block">
-                Browse all products
-              </span>
-            </Link>
-
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 sm:gap-3">
             {categories.map((cat) => (
               <Link
                 key={cat.id}
@@ -276,7 +265,7 @@ export default function Home() {
                 <span className="font-bold text-xs text-ink-900 group-hover:text-jade-800 block truncate">
                   {cat.name}
                 </span>
-                <span className="text-[10px] text-jade-700 myanmar-text block truncate">
+                <span className="text-[10px] text-jade-700 block truncate">
                   {cat.slug}
                 </span>
               </Link>
@@ -288,7 +277,7 @@ export default function Home() {
         <section className="pt-2 border-t border-stone-200/80 text-[11px] text-ink-600 grid grid-cols-1 sm:grid-cols-3 gap-3 py-2">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-jade-700 shrink-0" />
-            <span>Government ID &amp; Workshop Audited</span>
+            <span>Government ID &amp; Business Verification</span>
           </div>
           <div className="flex items-center gap-2">
             <Wallet className="w-4 h-4 text-jade-700 shrink-0" />
