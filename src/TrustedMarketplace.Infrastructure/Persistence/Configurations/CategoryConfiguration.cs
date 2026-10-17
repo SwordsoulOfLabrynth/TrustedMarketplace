@@ -10,6 +10,8 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
     public static readonly Guid FashionId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
     public static readonly Guid FoodId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
     public static readonly Guid ElectronicsId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+    public static readonly Guid BeautyId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+    public static readonly Guid HomeLivingId = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff");
 
     public void Configure(EntityTypeBuilder<Category> builder)
     {
@@ -48,9 +50,11 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
         var now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         builder.HasData(
             new Category(HandicraftsId, "Handicrafts & Art", null, true) { CreatedAtUtc = now, UpdatedAtUtc = now },
-            new Category(FashionId, "Traditional Fashion & Textiles", null, true) { CreatedAtUtc = now, UpdatedAtUtc = now },
-            new Category(FoodId, "Local Food & Tea", null, true) { CreatedAtUtc = now, UpdatedAtUtc = now },
-            new Category(ElectronicsId, "Electronics & Gadgets", null, true) { CreatedAtUtc = now, UpdatedAtUtc = now }
+            new Category(FashionId, "Fashion & Accessories", null, true) { CreatedAtUtc = now, UpdatedAtUtc = now },
+            new Category(FoodId, "Food & Local Products", null, true) { CreatedAtUtc = now, UpdatedAtUtc = now },
+            new Category(ElectronicsId, "Electronics & Gadgets", null, true) { CreatedAtUtc = now, UpdatedAtUtc = now },
+            new Category(BeautyId, "Beauty & Personal Care", null, true) { CreatedAtUtc = now, UpdatedAtUtc = now },
+            new Category(HomeLivingId, "Home & Living", null, true) { CreatedAtUtc = now, UpdatedAtUtc = now }
         );
     }
 }

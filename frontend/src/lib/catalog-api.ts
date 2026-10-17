@@ -37,6 +37,7 @@ export const catalogApi = {
       categoryId: query.categoryId,
       minPrice: query.minPrice,
       maxPrice: query.maxPrice,
+      sortBy: query.sortBy,
       page: query.page,
       pageSize: query.pageSize,
     });

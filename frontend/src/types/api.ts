@@ -140,6 +140,7 @@ export interface ProductDto {
   status: string;
   createdAtUtc: string;
   images: ProductImageDto[];
+  sellerVerificationStatus?: "Verified" | "PendingReverification" | "ReverificationRejected" | "Unverified" | string;
 }
 
 export interface PagedResult<T> {
@@ -154,6 +155,7 @@ export interface ProductSearchQuery {
   categoryId?: string;
   minPrice?: number;
   maxPrice?: number;
+  sortBy?: string;
   page?: number;
   pageSize?: number;
 }

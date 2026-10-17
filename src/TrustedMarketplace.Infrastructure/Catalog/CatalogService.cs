@@ -76,13 +76,26 @@ public class CatalogService : ICatalogService
             dbQuery = dbQuery.Where(p => p.PriceAmount <= query.MaxPrice.Value);
         }
 
-        // If no keyword is provided, return standard paginated catalog sorted by CreatedAtUtc
+        // Price and date sorting preferences
+        var isPriceAsc = string.Equals(query.SortBy, "price_asc", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(query.SortBy, "price-asc", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(query.SortBy, "priceLowToHigh", StringComparison.OrdinalIgnoreCase);
+        var isPriceDesc = string.Equals(query.SortBy, "price_desc", StringComparison.OrdinalIgnoreCase) ||
+                          string.Equals(query.SortBy, "price-desc", StringComparison.OrdinalIgnoreCase) ||
+                          string.Equals(query.SortBy, "priceHighToLow", StringComparison.OrdinalIgnoreCase);
+
+        // If no keyword is provided, return standard paginated catalog sorted by chosen criteria
         if (string.IsNullOrWhiteSpace(query.Keyword))
         {
             var totalCount = await dbQuery.CountAsync(ct);
 
-            var items = await dbQuery
-                .OrderByDescending(p => p.CreatedAtUtc)
+            var orderedQuery = isPriceAsc
+                ? dbQuery.OrderBy(p => p.PriceAmount).ThenByDescending(p => p.CreatedAtUtc)
+                : isPriceDesc
+                    ? dbQuery.OrderByDescending(p => p.PriceAmount).ThenByDescending(p => p.CreatedAtUtc)
+                    : dbQuery.OrderByDescending(p => p.CreatedAtUtc);
+
+            var items = await orderedQuery
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(ct);
@@ -177,9 +190,14 @@ public class CatalogService : ICatalogService
 
             var totalMatched = scoredResults.Count;
 
-            var pagedItems = scoredResults
-                .OrderByDescending(x => x.LexicalScore >= 1.0f ? 200f : (x.LexicalScore >= 0.7f ? 100f : x.HybridScore))
-                .ThenByDescending(x => x.Product.CreatedAtUtc)
+            var sortedResults = isPriceAsc
+                ? scoredResults.OrderBy(x => x.Product.PriceAmount).ThenByDescending(x => x.Product.CreatedAtUtc)
+                : isPriceDesc
+                    ? scoredResults.OrderByDescending(x => x.Product.PriceAmount).ThenByDescending(x => x.Product.CreatedAtUtc)
+                    : scoredResults.OrderByDescending(x => x.LexicalScore >= 1.0f ? 200f : (x.LexicalScore >= 0.7f ? 100f : x.HybridScore))
+                                   .ThenByDescending(x => x.Product.CreatedAtUtc);
+
+            var pagedItems = sortedResults
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(x => x.Product)
@@ -200,8 +218,13 @@ public class CatalogService : ICatalogService
             var fallbackQuery = dbQuery.Where(p => p.Title.ToLower().Contains(kwLower) || p.Description.ToLower().Contains(kwLower));
             var totalCount = await fallbackQuery.CountAsync(ct);
 
-            var items = await fallbackQuery
-                .OrderByDescending(p => p.CreatedAtUtc)
+            var orderedFallback = isPriceAsc
+                ? fallbackQuery.OrderBy(p => p.PriceAmount).ThenByDescending(p => p.CreatedAtUtc)
+                : isPriceDesc
+                    ? fallbackQuery.OrderByDescending(p => p.PriceAmount).ThenByDescending(p => p.CreatedAtUtc)
+                    : fallbackQuery.OrderByDescending(p => p.CreatedAtUtc);
+
+            var items = await orderedFallback
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(ct);
@@ -875,7 +898,8 @@ public class CatalogService : ICatalogService
             p.Images
                 .OrderBy(i => i.SortOrder)
                 .Select(i => ToImageDto(p.Id, i))
-                .ToList());
+                .ToList(),
+            p.SellerProfile?.VerificationStatus.ToString() ?? "Unverified");
 
     private static ProductImageDto ToImageDto(Guid productId, ProductImage i) =>
         new(

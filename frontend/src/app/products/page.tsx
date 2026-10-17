@@ -30,6 +30,7 @@ function ProductCatalogContent() {
   const currentCategoryId = searchParams.get("categoryId") || "";
   const currentMinPrice = searchParams.get("minPrice") || "";
   const currentMaxPrice = searchParams.get("maxPrice") || "";
+  const currentSortBy = searchParams.get("sortBy") || "newest";
   const currentPage = parseInt(searchParams.get("page") || "1", 10);
 
   // Local form inputs
@@ -42,7 +43,7 @@ function ProductCatalogContent() {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
-  const [pageSize] = useState<number>(10);
+  const [pageSize] = useState<number>(12);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,6 +90,7 @@ function ProductCatalogContent() {
         categoryId: currentCategoryId || undefined,
         minPrice: currentMinPrice ? parseFloat(currentMinPrice) : undefined,
         maxPrice: currentMaxPrice ? parseFloat(currentMaxPrice) : undefined,
+        sortBy: currentSortBy !== "newest" ? currentSortBy : undefined,
         page: currentPage,
         pageSize,
       })
@@ -112,7 +114,7 @@ function ProductCatalogContent() {
     return () => {
       isMounted = false;
     };
-  }, [currentKeyword, currentCategoryId, currentMinPrice, currentMaxPrice, currentPage, pageSize]);
+  }, [currentKeyword, currentCategoryId, currentMinPrice, currentMaxPrice, currentSortBy, currentPage, pageSize]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +123,10 @@ function ProductCatalogContent() {
 
   const handleCategorySelect = (catId?: string) => {
     updateUrl({ categoryId: catId || undefined, page: 1 });
+  };
+
+  const handleSortChange = (newSort: string) => {
+    updateUrl({ sortBy: newSort === "newest" ? undefined : newSort, page: 1 });
   };
 
   const handlePriceApply = (e: React.FormEvent) => {
@@ -142,7 +148,7 @@ function ProductCatalogContent() {
 
   const totalPages = Math.ceil(totalCount / pageSize) || 1;
   const hasActiveFilters = Boolean(
-    currentKeyword || currentCategoryId || currentMinPrice || currentMaxPrice
+    currentKeyword || currentCategoryId || currentMinPrice || currentMaxPrice || currentSortBy !== "newest"
   );
 
   return (
@@ -156,7 +162,7 @@ function ProductCatalogContent() {
     >
       <div className="space-y-4 py-3">
         {/* Page Title & Breadcrumbs */}
-        <div className="flex items-center justify-between border-b border-stone-200/80 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-200/80 pb-3 gap-2">
           <div>
             <nav className="text-[11px] text-ink-500 flex items-center gap-1 mb-0.5">
               <Link href="/" className="hover:underline">
@@ -166,23 +172,39 @@ function ProductCatalogContent() {
               <span className="text-ink-800 font-medium">Catalog</span>
             </nav>
             <h1 className="text-lg sm:text-xl font-bold text-ink-900 tracking-tight">
-              Artisan Catalog
+              Marketplace Catalog
             </h1>
+            <p className="text-xs text-ink-500 mt-0.5">
+              Browse verified listings across electronics, fashion, beauty, home living, foods, and crafts.
+            </p>
           </div>
 
-          <span className="text-xs text-ink-500 font-mono bg-white px-2.5 py-1 rounded-lg border border-stone-200 shadow-2xs">
-            {totalCount} {totalCount === 1 ? "piece" : "pieces"}
+          <span className="self-start sm:self-center text-xs text-ink-500 font-mono bg-white px-2.5 py-1 rounded-lg border border-stone-200 shadow-2xs">
+            {totalCount} {totalCount === 1 ? "product" : "products"}
           </span>
         </div>
 
-        {/* Search Bar */}
-        <form onSubmit={handleSearchSubmit} className="relative flex items-center gap-2">
-          <div className="relative flex-1">
+        {/* Trust Proposition Micro-Banner */}
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-jade-50/70 border border-jade-200/70 text-xs text-jade-950">
+          <div className="w-5 h-5 rounded-full bg-jade-100 flex items-center justify-center shrink-0 mt-0.5">
+            <span className="text-[11px] font-bold text-jade-800">✓</span>
+          </div>
+          <div className="text-[11px] leading-relaxed">
+            <strong className="text-jade-900">Buyer Trust &amp; Seller Verification:</strong> Every listing displays the real identity verification status of its seller.
+            <span className="text-ink-500 block mt-0.5">
+              Note: Seller verification confirms government ID and business credentials; it is not a guarantee of product quality or transaction safety.
+            </span>
+          </div>
+        </div>
+
+        {/* Search Bar & Controls Row */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <form onSubmit={handleSearchSubmit} className="relative flex-1">
             <input
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search crafts, materials, or artisans — e.g. marionette, lacquerware, lotus silk..."
+              placeholder="Search products, categories, or sellers — e.g. wireless earbuds, silk scarf, roasted coffee..."
               className="w-full pl-9 pr-8 py-2.5 text-xs rounded-xl border border-stone-300 bg-white text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-jade-600/20 focus:border-jade-700 transition-all shadow-2xs font-medium"
             />
             <Search className="w-4 h-4 text-ink-400 absolute left-3 top-3 pointer-events-none" />
@@ -199,37 +221,56 @@ function ProductCatalogContent() {
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
+          </form>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Price Sort Dropdown */}
+            <div className="relative">
+              <select
+                value={currentSortBy}
+                onChange={(e) => handleSortChange(e.target.value)}
+                className="px-3 py-2.5 rounded-xl border border-stone-300 bg-white text-xs font-medium text-ink-700 shadow-2xs focus:outline-none focus:border-jade-700 focus:ring-2 focus:ring-jade-600/20 cursor-pointer"
+                title="Sort catalog products"
+                aria-label="Sort catalog products"
+              >
+                <option value="newest">Sort by: Newest</option>
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+              </select>
+            </div>
+
+            {/* Price Filter Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setShowPriceFilter(!showPriceFilter)}
+              className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-colors shadow-2xs flex items-center justify-center shrink-0 gap-1.5 ${
+                showPriceFilter || currentMinPrice || currentMaxPrice
+                  ? "bg-jade-50 border-jade-300 text-jade-800 font-semibold"
+                  : "bg-white border-stone-300 text-ink-700 hover:bg-stone-50"
+              }`}
+              title="Filter by price bounds"
+              aria-label="Filter by price bounds"
+            >
+              <SlidersHorizontal className="w-4 h-4 text-jade-700" />
+              <span className="text-xs">Price Bounds</span>
+            </button>
           </div>
+        </div>
 
-          {/* Price Filter Toggle Button */}
-          <button
-            type="button"
-            onClick={() => setShowPriceFilter(!showPriceFilter)}
-            className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-colors shadow-2xs flex items-center justify-center shrink-0 gap-1.5 ${
-              showPriceFilter || currentMinPrice || currentMaxPrice
-                ? "bg-jade-50 border-jade-300 text-jade-800 font-semibold"
-                : "bg-white border-stone-300 text-ink-700 hover:bg-stone-50"
-            }`}
-            title="Filter by price bounds"
-            aria-label="Filter by price bounds"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-jade-700" />
-            <span className="hidden sm:inline text-xs">Price</span>
-          </button>
-        </form>
-
-        {/* Quick Semantic Suggestion Chips */}
+        {/* Quick Suggestion Chips */}
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-ink-500 pt-0.5">
           <span className="font-medium text-ink-600 flex items-center gap-1">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-jade-600" />
             <span>Try:</span>
           </span>
           {[
-            { label: "Puppets (Marionettes)", q: "Puppets" },
-            { label: "Lacquerware", q: "Lacquerware" },
-            { label: "Lotus Silk", q: "Lotus Silk" },
-            { label: "Teakwood", q: "Teakwood" },
-            { label: "Tea", q: "Tea" },
+            { label: "Wireless Audio", q: "Earbuds" },
+            { label: "Power Banks", q: "Power Bank" },
+            { label: "Natural Skincare", q: "Thanakha" },
+            { label: "Shan Coffee", q: "Coffee" },
+            { label: "Handwoven Longyi", q: "Longyi" },
+            { label: "Home Decor", q: "Bamboo" },
+            { label: "Heritage Marionette", q: "Marionette" },
           ].map(({ label, q }) => (
             <button
               key={q}

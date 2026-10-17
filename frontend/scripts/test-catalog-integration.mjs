@@ -31,8 +31,8 @@ async function runTests() {
   assert(Array.isArray(categories) && categories.length >= 4, `Categories returned as array of ${categories.length} items`);
   const handicrafts = categories.find((c) => c.slug === "handicrafts-art");
   assert(handicrafts !== undefined, "Found 'handicrafts-art' category");
-  const textiles = categories.find((c) => c.slug === "traditional-fashion-textiles");
-  assert(textiles !== undefined, "Found 'traditional-fashion-textiles' category");
+  const textiles = categories.find((c) => c.slug === "fashion-accessories" || c.slug === "traditional-fashion-textiles");
+  assert(textiles !== undefined, "Found fashion category ('fashion-accessories' or 'traditional-fashion-textiles')");
 
   // 2. Public Catalog Search & Pagination
   console.log("\n--- 2. Public Catalog Browsing ---");

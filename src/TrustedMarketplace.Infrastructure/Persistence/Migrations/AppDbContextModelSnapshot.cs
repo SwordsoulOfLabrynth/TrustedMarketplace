@@ -227,8 +227,8 @@ namespace TrustedMarketplace.Infrastructure.Persistence.Migrations
                             Id = new Guid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
                             CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             IsActive = true,
-                            Name = "Traditional Fashion & Textiles",
-                            Slug = "traditional-fashion-textiles",
+                            Name = "Fashion & Accessories",
+                            Slug = "fashion-accessories",
                             UpdatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
@@ -236,8 +236,8 @@ namespace TrustedMarketplace.Infrastructure.Persistence.Migrations
                             Id = new Guid("cccccccc-cccc-cccc-cccc-cccccccccccc"),
                             CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             IsActive = true,
-                            Name = "Local Food & Tea",
-                            Slug = "local-food-tea",
+                            Name = "Food & Local Products",
+                            Slug = "food-local-products",
                             UpdatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
@@ -247,6 +247,24 @@ namespace TrustedMarketplace.Infrastructure.Persistence.Migrations
                             IsActive = true,
                             Name = "Electronics & Gadgets",
                             Slug = "electronics-gadgets",
+                            UpdatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
+                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "Beauty & Personal Care",
+                            Slug = "beauty-personal-care",
+                            UpdatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "Home & Living",
+                            Slug = "home-living",
                             UpdatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
                 });

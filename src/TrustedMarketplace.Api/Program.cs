@@ -137,43 +137,37 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-// Database initialization: apply pending migrations in production and synchronize canonical subscription plans
-if (!app.Environment.IsEnvironment("Testing"))
+// Database initialization: apply pending migrations and synchronize canonical subscription plans
+using var initScope = app.Services.CreateScope();
+var initLogger = initScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+var dbContext = initScope.ServiceProvider.GetService<AppDbContext>();
+
+if (dbContext != null)
 {
-    using var initScope = app.Services.CreateScope();
-    var initLogger = initScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    var dbContext = initScope.ServiceProvider.GetService<AppDbContext>();
-
-    if (dbContext != null)
+    try
     {
-        try
+        var canConnect = await dbContext.Database.CanConnectAsync();
+        if (canConnect)
         {
-            var canConnect = await dbContext.Database.CanConnectAsync();
-            if (canConnect)
+            initLogger.LogInformation("Applying pending database migrations...");
+            await dbContext.Database.MigrateAsync();
+
+            var premiumPlan = await dbContext.SubscriptionPlans
+                .FirstOrDefaultAsync(p => p.Id == SubscriptionPlanConfiguration.PremiumPlanId);
+
+            if (premiumPlan != null && premiumPlan.PriceAmount != 30000m)
             {
-                if (app.Environment.IsProduction())
-                {
-                    initLogger.LogInformation("Applying pending database migrations in production...");
-                    await dbContext.Database.MigrateAsync();
-                }
-
-                var premiumPlan = await dbContext.SubscriptionPlans
-                    .FirstOrDefaultAsync(p => p.Id == SubscriptionPlanConfiguration.PremiumPlanId);
-
-                if (premiumPlan != null && premiumPlan.PriceAmount != 30000m)
-                {
-                    initLogger.LogInformation(
-                        "Updating canonical Premium subscription plan price from {OldPrice} to 30000 MMK in database",
-                        premiumPlan.PriceAmount);
-                    premiumPlan.UpdatePrice(30000m);
-                    await dbContext.SaveChangesAsync();
-                }
+                initLogger.LogInformation(
+                    "Updating canonical Premium subscription plan price from {OldPrice} to 30000 MMK in database",
+                    premiumPlan.PriceAmount);
+                premiumPlan.UpdatePrice(30000m);
+                await dbContext.SaveChangesAsync();
             }
         }
-        catch (Exception ex)
-        {
-            initLogger.LogError(ex, "Database startup initialization encountered an exception: {Message}", ex.Message);
-        }
+    }
+    catch (Exception ex)
+    {
+        initLogger.LogError(ex, "Database startup initialization encountered an exception: {Message}", ex.Message);
     }
 }
 

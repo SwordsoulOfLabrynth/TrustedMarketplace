@@ -30,11 +30,12 @@ public class ProductsController : ControllerBase
         [FromQuery] Guid? categoryId,
         [FromQuery] decimal? minPrice,
         [FromQuery] decimal? maxPrice,
+        [FromQuery] string? sortBy,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        var query = new ProductSearchQuery(keyword, categoryId, minPrice, maxPrice, page, pageSize);
+        var query = new ProductSearchQuery(keyword, categoryId, minPrice, maxPrice, page, pageSize, sortBy);
         var result = await _catalogService.SearchProductsAsync(query, ct);
         return Ok(result);
     }

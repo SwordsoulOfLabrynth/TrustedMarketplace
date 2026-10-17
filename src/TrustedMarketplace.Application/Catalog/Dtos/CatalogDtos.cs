@@ -36,7 +36,8 @@ public record ProductDto(
     string Condition,
     string Status,
     DateTime CreatedAtUtc,
-    List<ProductImageDto> Images
+    List<ProductImageDto> Images,
+    string? SellerVerificationStatus = null
 );
 
 public record CreateProductRequest(
@@ -62,7 +63,8 @@ public record ProductSearchQuery(
     decimal? MinPrice = null,
     decimal? MaxPrice = null,
     int Page = 1,
-    int PageSize = 20
+    int PageSize = 20,
+    string? SortBy = null
 );
 
 public record PagedResult<T>(

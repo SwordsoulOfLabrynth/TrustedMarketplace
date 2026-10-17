@@ -47,7 +47,13 @@ jobs:
       - name: Build solution
         run: dotnet build --no-restore -c Release
 
-      - name: Run all tests (204 tests)
+      - name: Restore local tools
+        run: dotnet tool restore
+
+      - name: Apply EF Core migrations
+        run: dotnet tool run dotnet-ef database update --project src/TrustedMarketplace.Infrastructure --startup-project src/TrustedMarketplace.Api
+
+      - name: Run all tests
         run: dotnet test --no-build -c Release --logger "console;verbosity=normal"
 
   # ── Frontend: Build ───────────────────────────────────────────────────────
