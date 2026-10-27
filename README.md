@@ -1,7 +1,7 @@
-# MatchGuard (formerly Trusted Marketplace)
+# MatchGuard
 
 <p align="center">
-  <img src="frontend/public/images/branding/matchguard-logo.svg" alt="MatchGuard Logo" width="220" />
+  <img src="docs/images/matchguard-logo.png" alt="MatchGuard Logo" width="220" />
 </p>
 
 <p align="center">
@@ -9,8 +9,21 @@
   A non-custodial, verified-seller marketplace platform built for Myanmar social commerce.
 </p>
 
-> **Backend Web API & Frontend Application** for **MatchGuard** — a trust-first e-commerce system built for the Myanmar market pilot.  
+<p align="center">
+  <img src="https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square&logo=dotnet&logoColor=white" alt=".NET 10" />
+  <img src="https://img.shields.io/badge/C%23-13-239120?style=flat-square&logo=csharp&logoColor=white" alt="C# 13" />
+  <img src="https://img.shields.io/badge/Tests-152%20Passing-brightgreen?style=flat-square&logo=xunit" alt="Tests" />
+  <img src="https://img.shields.io/badge/PostgreSQL-16-336791?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/Architecture-Modular%20Monolith-007ACC?style=flat-square" alt="Modular Monolith" />
+  <img src="https://img.shields.io/badge/Frontend-Next.js%2015-black?style=flat-square&logo=next.js&logoColor=white" alt="Next.js" />
+</p>
+
+> **Backend Web API & Frontend Application** for **MatchGuard** *(formerly Trusted Marketplace)* — a trust-first e-commerce system built for the Myanmar market pilot.  
 > Implemented in **C# 13** on **.NET 10** (`net10.0`) as a **Modular Monolith** with **ASP.NET Core**, **Entity Framework Core**, **PostgreSQL**, and a modern **Next.js** frontend.
+
+<p align="center">
+  <img src="docs/images/products-catalog-desktop.png" alt="MatchGuard Marketplace Catalog" width="100%" />
+</p>
 
 ---
 
